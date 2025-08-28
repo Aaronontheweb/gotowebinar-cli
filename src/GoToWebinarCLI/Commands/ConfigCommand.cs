@@ -42,7 +42,11 @@ public sealed class ConfigCommand : Command
         profilesCommand.AddCommand(listProfilesCommand);
         profilesCommand.AddCommand(switchProfileCommand);
 
+        var authCommand = new Command("auth", "Authenticate with GoToWebinar");
+        authCommand.SetHandler(async () => await AuthenticateAsync());
+
         AddCommand(setCommand);
+        AddCommand(authCommand);
         AddCommand(testCommand);
         AddCommand(getCommand);
         AddCommand(profilesCommand);
@@ -185,6 +189,16 @@ public sealed class ConfigCommand : Command
         configService.SetCurrentProfile(name);
         await configService.SaveConfigAsync(config);
         Console.WriteLine($"✓ Switched to profile '{name}'");
+    }
+
+    private static async Task AuthenticateAsync()
+    {
+        var configService = new ConfigurationService();
+        var httpClient = new HttpClient();
+        var authService = new AuthenticationService(httpClient, configService);
+
+        var success = await authService.AuthenticateInteractiveAsync();
+        Environment.Exit(success ? 0 : 1);
     }
 
     private static string? MaskSecret(string? secret)

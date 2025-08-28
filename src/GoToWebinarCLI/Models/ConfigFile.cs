@@ -15,6 +15,26 @@ public sealed class ConfigFile
 
     [JsonPropertyName("settings")]
     public ConfigSettings Settings { get; set; } = new();
+
+    public ConfigProfile GetCurrentProfile()
+    {
+        if (string.IsNullOrEmpty(CurrentProfile))
+        {
+            CurrentProfile = "default";
+            if (!Profiles.ContainsKey(CurrentProfile))
+            {
+                Profiles[CurrentProfile] = new ConfigProfile();
+            }
+        }
+
+        if (!Profiles.TryGetValue(CurrentProfile, out var profile))
+        {
+            profile = new ConfigProfile();
+            Profiles[CurrentProfile] = profile;
+        }
+
+        return profile;
+    }
 }
 
 public sealed class ConfigProfile
@@ -56,23 +76,3 @@ public sealed class ConfigSettings
     public string UpdateChannel { get; set; } = "stable";
 }
 
-public sealed class OAuthToken
-{
-    [JsonPropertyName("access_token")]
-    public string AccessToken { get; set; } = string.Empty;
-
-    [JsonPropertyName("refresh_token")]
-    public string RefreshToken { get; set; } = string.Empty;
-
-    [JsonPropertyName("expires_in")]
-    public int ExpiresIn { get; set; }
-
-    [JsonPropertyName("token_type")]
-    public string TokenType { get; set; } = "Bearer";
-
-    [JsonPropertyName("organizer_key")]
-    public string? OrganizerKey { get; set; }
-
-    [JsonPropertyName("account_key")]
-    public string? AccountKey { get; set; }
-}

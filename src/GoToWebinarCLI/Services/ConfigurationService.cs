@@ -132,6 +132,11 @@ public sealed class ConfigurationService
         }
     }
 
+    public async Task<ConfigFile> GetConfigAsync()
+    {
+        return await LoadConfigAsync();
+    }
+
     private ConfigProfile EncryptProfile(ConfigProfile profile)
     {
         return new ConfigProfile
