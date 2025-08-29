@@ -1,7 +1,13 @@
+param (
+    [Parameter(Mandatory=$false)]
+    [string]$Version
+)
+
 function Get-ReleaseNotes {
     param (
         [Parameter(Mandatory=$true)]
-        [string]$MarkdownFile
+        [string]$MarkdownFile,
+        [string]$TargetVersion = $null
     )
 
     # Read markdown file content
@@ -10,35 +16,71 @@ function Get-ReleaseNotes {
     # Split content based on headers
     $sections = $content -split "####"
 
-    # Output object to store result
-    $outputObject = [PSCustomObject]@{
-        Version       = $null
-        Date          = $null
-        ReleaseNotes  = $null
-    }
-
-    # Check if we have at least 3 sections (1. Before the header, 2. Header, 3. Release notes)
-    if ($sections.Count -ge 3) {
-        $header = $sections[1].Trim()
-        $releaseNotes = $sections[2].Trim()
-
-        # Extract version and date from the header
-        $headerParts = $header -split " ", 2
-        if ($headerParts.Count -eq 2) {
-            $outputObject.Version = $headerParts[0]
-            $outputObject.Date = $headerParts[1]
+    # If no target version specified, get the first release
+    if ([string]::IsNullOrEmpty($TargetVersion)) {
+        if ($sections.Count -ge 2) {
+            $header = $sections[1].Trim()
+            
+            # Find the next header or use rest of content
+            $endIndex = $sections[1].IndexOf("`n---")
+            if ($endIndex -gt 0) {
+                $releaseContent = $sections[1].Substring(0, $endIndex).Trim()
+            } else {
+                $releaseContent = $sections[1].Trim()
+            }
+            
+            # Remove the version line and return just the notes
+            $lines = $releaseContent -split "`n"
+            if ($lines.Count -gt 1) {
+                return ($lines[1..($lines.Count-1)] -join "`n").Trim()
+            }
         }
-
-        $outputObject.ReleaseNotes = $releaseNotes
+        return ""
     }
 
-    # Return the output object
-    return $outputObject
+    # Search for specific version
+    foreach ($section in $sections) {
+        if ($section.Trim() -match "^$([regex]::Escape($TargetVersion))\s") {
+            # Found the target version
+            $lines = $section.Trim() -split "`n"
+            
+            # Skip the version line and any following empty lines
+            $noteLines = @()
+            $foundContent = $false
+            
+            for ($i = 1; $i -lt $lines.Count; $i++) {
+                $line = $lines[$i]
+                
+                # Stop at the next section delimiter
+                if ($line -match "^---") {
+                    break
+                }
+                
+                # Start collecting after finding non-empty content
+                if (-not [string]::IsNullOrWhiteSpace($line)) {
+                    $foundContent = $true
+                }
+                
+                if ($foundContent -or -not [string]::IsNullOrWhiteSpace($line)) {
+                    $noteLines += $line
+                }
+            }
+            
+            return ($noteLines -join "`n").Trim()
+        }
+    }
+
+    # Version not found, return empty
+    return ""
 }
 
-# Call function example:
-#$result = Get-ReleaseNotes -MarkdownFile "$PSScriptRoot\RELEASE_NOTES.md"
-#Write-Output "Version: $($result.Version)"
-#Write-Output "Date: $($result.Date)"
-#Write-Output "Release Notes:"
-#Write-Output $result.ReleaseNotes
+# Script entry point
+$releaseNotesPath = Join-Path $PSScriptRoot ".." "RELEASE_NOTES.md"
+
+if (Test-Path $releaseNotesPath) {
+    $notes = Get-ReleaseNotes -MarkdownFile $releaseNotesPath -TargetVersion $Version
+    Write-Output $notes
+} else {
+    Write-Error "RELEASE_NOTES.md not found at $releaseNotesPath"
+    exit 1
+}
