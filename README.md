@@ -1,70 +1,135 @@
-# build-system-template
-Akka.NET project build system template that provides standardized build and CI/CD configuration for all Akka.NET projects.
+# GoToWebinar CLI
 
-## Build System Overview
-This repository contains our standardized build system setup that can be used across all Akka.NET projects. Here are the key components and practices we follow:
+A command-line interface for interacting with the GoToWebinar API, providing easy access to webinar management, attendee tracking, and registration handling.
 
-### CI/CD Configuration
-We primarily use GitHub Actions for our CI/CD pipelines, but also maintain Azure DevOps pipeline examples. You can find the configuration examples in:
-- `.github/workflows/` - GitHub Actions pipeline examples
-- `.azuredevops/` - Azure DevOps pipeline examples
+## Features
 
-### SDK Version Management
-We use `global.json` to pin the .NET SDK version for both CI/CD environments and local development. This ensures consistent builds across all environments and developers.
+- **Authentication Management**: Secure OAuth2 authentication flow with token management
+- **Configuration Management**: Store and manage multiple API configurations
+- **Rate Limiting**: Built-in rate limiting to respect API quotas
+- **Auto-Update**: Automatic update checking for new CLI versions
+- **Webinar Management**: Create, list, and manage webinars
+- **Registrant Handling**: Export and manage webinar registrants
+- **Attendee Tracking**: Track and export attendee information
 
-### .NET Tools
-We use local .NET tools to enhance our build and documentation process. The tools are configured in `.config/dotnet-tools.json` and include:
+## Installation
 
-- [Incrementalist](https://github.com/petabridge/Incrementalist) (v1.0.0-beta4) - Used for determining which projects need to be rebuilt based on Git changes
-- [DocFx](https://dotnet.github.io/docfx/) (v2.78.3) - Used for generating documentation
+### Prerequisites
+- .NET 9.0 SDK or later (check `global.json` for exact version)
 
-To restore these tools in your local environment, run:
-```powershell
-dotnet tool restore
+### Build from Source
+```bash
+git clone https://github.com/stannardlabs/gotowebinar-cli.git
+cd gotowebinar-cli
+dotnet build
 ```
 
-This command is automatically executed in our CI/CD pipelines (both GitHub Actions and Azure DevOps) to ensure tools are available during builds.
-
-### Centralized Package and Build Management
-We utilize two key MSBuild files for centralized configuration:
-
-1. `Directory.Packages.props` - Implements [Central Package Version Management](https://learn.microsoft.com/nuget/consume-packages/Central-Package-Management) for consistent NuGet package versions across all projects in the solution.
-
-2. `Directory.Build.props` - Defines common build properties, including:
-   - Copyright and author information
-   - Source linking configuration
-   - NuGet package metadata
-   - Common compiler settings
-   - Target framework definitions
-
-### Code Coverage Configuration
-The `coverlet.runsettings` file configures code coverage collection using Coverlet, with settings for:
-- Multiple coverage report formats (JSON, Cobertura, LCOV, TeamCity, OpenCover)
-- Test assembly exclusions
-- Source linking integration
-- Performance optimizations
-
-### Release Management
-Our release process is streamlined through:
-- `RELEASE_NOTES.md` - Contains version history and release notes
-- `build.ps1` - PowerShell script that processes release notes and updates version information
-- Supporting scripts in `/scripts`:
-  - `bumpVersion.ps1` - Updates version numbers
-  - `getReleaseNotes.ps1` - Parses release notes
-
-The build system primarily relies on standard `dotnet` CLI commands, with the PowerShell scripts mainly handling release note processing and version management.
-
-### Solution Format
-We prefer the new `.slnx` XML-based solution format over the traditional `.sln` format. This requires .NET 9 SDK or later. The new format is more concise and easier to work with. You can migrate existing solutions using:
-
-```powershell
-dotnet sln migrate
+### Install as Global Tool
+```bash
+dotnet pack
+dotnet tool install --global --add-source ./nupkg GoToWebinarCLI
 ```
 
-For more information about the new `.slnx` format, see the [official announcement](https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/).
+## Usage
 
-## Getting Started
-1. Ensure you have the correct .NET SDK version installed (check `global.json`)
-2. Clone this repository
-3. Run `dotnet build` to verify the build system
-4. Customize the configuration files for your specific project needs
+### Initial Configuration
+Configure your API credentials:
+```bash
+gotowebinar config --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
+```
+
+### Authentication
+Authenticate with GoToWebinar:
+```bash
+gotowebinar auth login
+```
+
+### Common Commands
+
+List webinars:
+```bash
+gotowebinar webinar list
+```
+
+Export registrants:
+```bash
+gotowebinar registrant export --webinar-id WEBINAR_ID --output registrants.csv
+```
+
+Check for updates:
+```bash
+gotowebinar update check
+```
+
+### Getting Help
+```bash
+gotowebinar --help
+gotowebinar [command] --help
+```
+
+## Development
+
+### Project Structure
+- `src/GoToWebinarCLI/` - Main CLI application
+  - `Commands/` - Command implementations
+  - `Models/` - Data models for API interactions
+  - `Services/` - Core services (API client, authentication, etc.)
+
+### Building
+```bash
+dotnet build
+```
+
+### Running Tests
+```bash
+dotnet test
+```
+
+### Creating a Release
+1. Update `RELEASE_NOTES.md` with version information
+2. Run the build script to update version numbers:
+   ```powershell
+   ./build.ps1
+   ```
+3. Create and push a tag to trigger the release pipeline
+
+## Configuration
+
+The CLI stores configuration in the user's home directory:
+- Windows: `%USERPROFILE%\.gotowebinar\config.json`
+- macOS/Linux: `~/.gotowebinar/config.json`
+
+## API Rate Limiting
+
+The CLI includes built-in rate limiting to comply with GoToWebinar API limits. The rate limiter automatically handles:
+- Request throttling
+- Retry logic with exponential backoff
+- Proper error handling for rate limit responses
+
+## Auto-Update Feature
+
+The CLI can automatically check for updates. To enable:
+```bash
+gotowebinar config --enable-auto-update
+```
+
+To manually check for updates:
+```bash
+gotowebinar update check
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+
+## Support
+
+For issues, feature requests, or questions, please open an issue on GitHub.
