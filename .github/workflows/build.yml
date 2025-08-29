@@ -1,0 +1,125 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore GoToWebinarCLI.sln
+      
+    - name: Check formatting
+      run: dotnet format GoToWebinarCLI.sln --verify-no-changes --verbosity diagnostic
+      
+    - name: Build
+      run: dotnet build GoToWebinarCLI.sln --no-restore --configuration Release
+      
+    - name: Test
+      run: dotnet test GoToWebinarCLI.sln --no-build --verbosity normal --configuration Release
+      
+    - name: Publish AOT (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        dotnet publish src/GoToWebinarCLI/GoToWebinarCLI.csproj \
+          -c Release \
+          -r linux-x64 \
+          --self-contained \
+          -p:PublishAot=true \
+          -o ./publish/linux-x64
+        
+    - name: Publish AOT (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        dotnet publish src/GoToWebinarCLI/GoToWebinarCLI.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained `
+          -p:PublishAot=true `
+          -o ./publish/win-x64
+        
+    - name: Publish AOT (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        dotnet publish src/GoToWebinarCLI/GoToWebinarCLI.csproj \
+          -c Release \
+          -r osx-x64 \
+          --self-contained \
+          -p:PublishAot=true \
+          -o ./publish/osx-x64
+        
+    - name: Check binary size (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        SIZE=$(du -sh ./publish/linux-x64/gotowebinar | cut -f1)
+        echo "Linux binary size: $SIZE"
+        # Fail if binary is larger than 10MB
+        SIZE_BYTES=$(stat -c%s ./publish/linux-x64/gotowebinar)
+        if [ $SIZE_BYTES -gt 10485760 ]; then
+          echo "Binary size exceeds 10MB limit!"
+          exit 1
+        fi
+        
+    - name: Check binary size (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        $size = (Get-Item ./publish/win-x64/gotowebinar.exe).Length
+        $sizeMB = [math]::Round($size / 1MB, 2)
+        Write-Host "Windows binary size: $sizeMB MB"
+        if ($size -gt 10485760) {
+          Write-Host "Binary size exceeds 10MB limit!"
+          exit 1
+        }
+        
+    - name: Check binary size (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        SIZE=$(du -sh ./publish/osx-x64/gotowebinar | cut -f1)
+        echo "macOS binary size: $SIZE"
+        # Fail if binary is larger than 10MB
+        SIZE_BYTES=$(stat -f%z ./publish/osx-x64/gotowebinar)
+        if [ $SIZE_BYTES -gt 10485760 ]; then
+          echo "Binary size exceeds 10MB limit!"
+          exit 1
+        fi
+        
+    - name: Test binary execution (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        ./publish/linux-x64/gotowebinar --version
+        ./publish/linux-x64/gotowebinar --help
+        
+    - name: Test binary execution (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        ./publish/win-x64/gotowebinar.exe --version
+        ./publish/win-x64/gotowebinar.exe --help
+        
+    - name: Test binary execution (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        ./publish/osx-x64/gotowebinar --version
+        ./publish/osx-x64/gotowebinar --help
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: gotowebinar-cli-${{ matrix.os }}
+        path: ./publish/

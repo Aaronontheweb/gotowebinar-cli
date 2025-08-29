@@ -23,32 +23,25 @@ jobs:
 
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v4
         with:
           lfs: true
           fetch-depth: 0
 
       - name: "Install .NET SDK"
-        uses: actions/setup-dotnet@v4.3.1
+        uses: actions/setup-dotnet@v4
         with:
-          global-json-file: "./global.json"
+          dotnet-version: '9.0.x'
 
       - name: "Restore .NET tools"
         run: dotnet tool restore
 
-      - name: "Update release notes"
-        shell: pwsh
-        run: |
-          ./build.ps1
+      - name: "dotnet restore"
+        run: dotnet restore GoToWebinarCLI.sln
 
       - name: "dotnet build"
-        run: dotnet build -c Release
-
-      # .NET Framework tests can't run reliably on Linux, so we only do .NET 8
+        run: dotnet build GoToWebinarCLI.sln -c Release --no-restore
 
       - name: "dotnet test"
         shell: bash
-        run: dotnet test -c Release 
-
-      - name: "dotnet pack"
-        run: dotnet pack -c Release -o ./bin/nuget
+        run: dotnet test GoToWebinarCLI.sln -c Release --no-build
