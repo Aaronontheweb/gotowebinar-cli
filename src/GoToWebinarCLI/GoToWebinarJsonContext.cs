@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using GoToWebinarCLI.Models;
+using GoToWebinarCLI.Services;
 
 namespace GoToWebinarCLI;
 
@@ -32,6 +33,9 @@ namespace GoToWebinarCLI;
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(List<Webinar>), TypeInfoPropertyName = "ListWebinar")]
 [JsonSerializable(typeof(List<Registrant>), TypeInfoPropertyName = "ListRegistrant")]
+[JsonSerializable(typeof(UpdateInfo))]
+[JsonSerializable(typeof(VersionManifest))]
+[JsonSerializable(typeof(DownloadUrls))]
 public partial class GoToWebinarJsonContext : JsonSerializerContext
 {
 }

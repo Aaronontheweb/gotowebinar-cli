@@ -1,0 +1,156 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Get version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+          
+  build-and-upload:
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+            artifact_name: gotowebinar-linux-x64
+            binary_name: GoToWebinarCLI
+          - os: windows-latest
+            runtime: win-x64
+            artifact_name: gotowebinar-win-x64.exe
+            binary_name: GoToWebinarCLI.exe
+          - os: macos-latest
+            runtime: osx-x64
+            artifact_name: gotowebinar-osx-x64
+            binary_name: GoToWebinarCLI
+            
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Update version in project
+      shell: pwsh
+      run: |
+        $version = "${{ needs.create-release.outputs.version }}"
+        $csprojPath = "src/GoToWebinarCLI/GoToWebinarCLI.csproj"
+        $content = Get-Content $csprojPath -Raw
+        $content = $content -replace '<Version>.*</Version>', "<Version>$version</Version>"
+        $content = $content -replace '<AssemblyVersion>.*</AssemblyVersion>', "<AssemblyVersion>$version.0</AssemblyVersion>"
+        $content = $content -replace '<FileVersion>.*</FileVersion>', "<FileVersion>$version.0</FileVersion>"
+        Set-Content -Path $csprojPath -Value $content
+        
+    - name: Build and Publish AOT
+      run: |
+        dotnet publish src/GoToWebinarCLI/GoToWebinarCLI.csproj \
+          -c Release \
+          -r ${{ matrix.runtime }} \
+          --self-contained \
+          -p:PublishAot=true \
+          -p:Version=${{ needs.create-release.outputs.version }} \
+          -o ./publish
+          
+    - name: Compress binary (Linux/macOS)
+      if: matrix.os != 'windows-latest'
+      run: |
+        cd publish
+        tar -czf ../${{ matrix.artifact_name }}.tar.gz ${{ matrix.binary_name }}
+        cd ..
+        
+    - name: Compress binary (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        Compress-Archive -Path ./publish/${{ matrix.binary_name }} -DestinationPath ./${{ matrix.artifact_name }}.zip
+        
+    - name: Upload Release Asset (Linux/macOS)
+      if: matrix.os != 'windows-latest'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.artifact_name }}.tar.gz
+        asset_name: ${{ matrix.artifact_name }}.tar.gz
+        asset_content_type: application/gzip
+        
+    - name: Upload Release Asset (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.artifact_name }}.zip
+        asset_name: ${{ matrix.artifact_name }}.zip
+        asset_content_type: application/zip
+        
+  update-homebrew:
+    needs: [create-release, build-and-upload]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Homebrew Formula
+        run: |
+          echo "TODO: Update Homebrew formula with version ${{ needs.create-release.outputs.version }}"
+          # This would typically involve updating a homebrew tap repository
+          
+  update-version-manifest:
+    needs: [create-release, build-and-upload]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          
+      - name: Update version manifest
+        run: |
+          cat > version.json <<EOF
+          {
+            "version": "${{ needs.create-release.outputs.version }}",
+            "releaseDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "downloads": {
+              "linux-x64": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/gotowebinar-linux-x64.tar.gz",
+              "win-x64": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/gotowebinar-win-x64.exe.zip",
+              "osx-x64": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/gotowebinar-osx-x64.tar.gz"
+            }
+          }
+          EOF
+          
+      - name: Commit version manifest
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add version.json
+          git commit -m "Update version manifest to ${{ needs.create-release.outputs.version }}"
+          git push
