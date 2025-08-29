@@ -101,11 +101,11 @@ download_binary() {
     info "Extracting binary..."
     tar -xzf "$DOWNLOAD_FILE" -C "$TEMP_DIR"
     
-    if [ ! -f "${TEMP_DIR}/GoToWebinarCLI" ]; then
+    if [ ! -f "${TEMP_DIR}/gotowebinar" ]; then
         error "Binary not found in archive"
     fi
     
-    BINARY_PATH="${TEMP_DIR}/GoToWebinarCLI"
+    BINARY_PATH="${TEMP_DIR}/gotowebinar"
 }
 
 # Install the binary

@@ -39,15 +39,15 @@ jobs:
           - os: ubuntu-latest
             runtime: linux-x64
             artifact_name: gotowebinar-linux-x64
-            binary_name: GoToWebinarCLI
+            binary_name: gotowebinar
           - os: windows-latest
             runtime: win-x64
             artifact_name: gotowebinar-win-x64.exe
-            binary_name: GoToWebinarCLI.exe
+            binary_name: gotowebinar.exe
           - os: macos-latest
             runtime: osx-x64
             artifact_name: gotowebinar-osx-x64
-            binary_name: GoToWebinarCLI
+            binary_name: gotowebinar
             
     steps:
     - uses: actions/checkout@v4

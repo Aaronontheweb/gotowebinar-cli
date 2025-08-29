@@ -173,7 +173,7 @@ public sealed class UpdateService
     {
         var extractPath = Path.GetDirectoryName(zipPath)!;
         System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extractPath, true);
-        return Path.Combine(extractPath, "GoToWebinarCLI.exe");
+        return Path.Combine(extractPath, "gotowebinar.exe");
     }
 
     private static string ExtractTarGzFile(string tarGzPath)
@@ -191,7 +191,7 @@ public sealed class UpdateService
 
         process?.WaitForExit();
 
-        return Path.Combine(extractPath, "GoToWebinarCLI");
+        return Path.Combine(extractPath, "gotowebinar");
     }
 }
 

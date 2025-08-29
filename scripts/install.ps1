@@ -108,7 +108,7 @@ function Download-Binary {
         
         Expand-Archive -Path $downloadFile -DestinationPath $extractPath -Force
         
-        $binaryPath = Join-Path $extractPath "GoToWebinarCLI.exe"
+        $binaryPath = Join-Path $extractPath "gotowebinar.exe"
         if (-not (Test-Path $binaryPath)) {
             Write-Error "Binary not found in archive"
         }
