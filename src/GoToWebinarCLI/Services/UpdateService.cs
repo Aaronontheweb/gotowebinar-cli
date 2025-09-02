@@ -29,7 +29,7 @@ public sealed class UpdateService
         {
             var response = await _httpClient.GetStringAsync(GitHubApiUrl);
             var releasesJson = JsonNode.Parse(response)?.AsArray();
-            
+
             if (releasesJson == null || releasesJson.Count == 0)
                 return null;
 
