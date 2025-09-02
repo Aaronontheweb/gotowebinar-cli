@@ -34,8 +34,6 @@ namespace GoToWebinarCLI;
 [JsonSerializable(typeof(List<Webinar>), TypeInfoPropertyName = "ListWebinar")]
 [JsonSerializable(typeof(List<Registrant>), TypeInfoPropertyName = "ListRegistrant")]
 [JsonSerializable(typeof(UpdateInfo))]
-[JsonSerializable(typeof(VersionManifest))]
-[JsonSerializable(typeof(DownloadUrls))]
 public partial class GoToWebinarJsonContext : JsonSerializerContext
 {
 }
