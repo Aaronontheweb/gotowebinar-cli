@@ -39,9 +39,7 @@
     <NetLibVersion>net6.0</NetLibVersion>
     <NetCoreTestVersion>net9.0</NetCoreTestVersion>
   </PropertyGroup>
-  <ItemGroup>
-    <Using Include="Akka.Event" />
-  </ItemGroup>
+  <!-- Removed Akka.Event global using as it's not needed for this project -->
   <!-- GitHub SourceLink -->
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />

@@ -12,6 +12,8 @@ class Program
         var rootCommand = new RootCommand("GoToWebinar CLI - Command-line interface for GoToWebinar API");
 
         rootCommand.AddCommand(new ConfigCommand());
+        rootCommand.AddCommand(new WebinarCommand());
+        rootCommand.AddCommand(new RegistrantCommand());
         rootCommand.AddCommand(UpdateCommand.Create());
 
         var parser = new CommandLineBuilder(rootCommand)

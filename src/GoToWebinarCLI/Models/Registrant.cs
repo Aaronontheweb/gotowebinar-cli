@@ -66,6 +66,12 @@ public sealed class QuestionResponse
 
     [JsonPropertyName("responseText")]
     public string ResponseText { get; set; } = string.Empty;
+
+    [JsonPropertyName("question")]
+    public string? Question { get; set; }
+
+    [JsonPropertyName("answer")]
+    public string? Answer { get; set; }
 }
 
 public sealed class CreateRegistrantRequest
