@@ -30,10 +30,38 @@ dotnet pack
 dotnet tool install --global --add-source ./nupkg GoToWebinarCLI
 ```
 
+## Getting GoToWebinar API Credentials
+
+To use this CLI, you'll need to obtain API credentials from GoToWebinar:
+
+1. **Create a Developer Account**: 
+   - Visit the [GoTo Developer Center](https://developer.goto.com/)
+   - Sign up for a developer account if you don't already have one
+
+2. **Create an OAuth Client**:
+   - Navigate to the [OAuth Clients](https://developer.goto.com/oauth-clients) section
+   - Click "Create OAuth Client"
+   - Fill in the required information:
+     - **Product**: Select "GoToWebinar"
+     - **Application Name**: Enter a name for your application
+     - **Application Description**: Provide a brief description
+     - **Redirect URIs**: Add `http://localhost:8080/callback` (required for CLI authentication)
+   
+3. **Obtain Your Credentials**:
+   - Once created, you'll receive:
+     - **Client ID**: A unique identifier for your application
+     - **Client Secret**: A secret key (keep this secure!)
+   - Save these credentials securely - you'll need them to configure the CLI
+
+4. **Important Notes**:
+   - Keep your Client Secret confidential and never commit it to version control
+   - The CLI stores credentials locally in your user configuration directory
+   - You may need to have an active GoToWebinar subscription to access certain API features
+
 ## Usage
 
 ### Initial Configuration
-Configure your API credentials:
+Configure your API credentials obtained from the steps above:
 ```bash
 gotowebinar config --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
 ```
