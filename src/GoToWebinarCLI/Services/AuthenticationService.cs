@@ -18,7 +18,7 @@ public class AuthenticationService
 {
     private const string AuthorizationEndpoint = "https://api.getgo.com/oauth/v2/authorize";
     private const string TokenEndpoint = "https://api.getgo.com/oauth/v2/token";
-    private const string RedirectUri = "http://localhost:7878/callback";
+    private const string RedirectUri = "http://localhost:8080/callback";
     private readonly HttpClient _httpClient;
     private readonly ConfigurationService _configService;
     private readonly GoToWebinarJsonContext _jsonContext;
