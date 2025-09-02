@@ -7,12 +7,19 @@ namespace GoToWebinarCLI.Commands;
 
 public sealed class ConfigCommand : Command
 {
-    public ConfigCommand() : base("config", "Manage GoToWebinar CLI configuration")
+    public ConfigCommand() : base("config", "Manage GoToWebinar CLI configuration and authentication")
     {
-        var setCommand = new Command("set", "Set configuration values");
-        var clientIdOption = new Option<string>("--client-id", "OAuth Client ID");
-        var clientSecretOption = new Option<string>("--client-secret", "OAuth Client Secret");
-        var profileOption = new Option<string>("--profile", () => "default", "Configuration profile name");
+        Description = "Configure API credentials, authenticate with GoToWebinar, and manage configuration profiles. " +
+                     "Get your OAuth credentials from https://developer.goto.com/oauth-clients";
+        
+        var setCommand = new Command("set", "Set GoToWebinar OAuth credentials")
+        {
+            Description = "Configure your OAuth Client ID and Client Secret obtained from the GoTo Developer Center. " +
+                         "Both credentials are required before you can authenticate."
+        };
+        var clientIdOption = new Option<string>("--client-id", "OAuth Client ID from GoTo Developer Center");
+        var clientSecretOption = new Option<string>("--client-secret", "OAuth Client Secret from GoTo Developer Center");
+        var profileOption = new Option<string>("--profile", () => "default", "Configuration profile name (for managing multiple accounts)");
 
         setCommand.AddOption(clientIdOption);
         setCommand.AddOption(clientSecretOption);
@@ -23,26 +30,51 @@ public sealed class ConfigCommand : Command
             await SetConfigAsync(clientId, clientSecret, profile);
         }, clientIdOption, clientSecretOption, profileOption);
 
-        var testCommand = new Command("test", "Test API connection");
+        var testCommand = new Command("test", "Test your GoToWebinar API connection")
+        {
+            Description = "Verifies that your credentials are configured and your authentication token is valid. " +
+                         "Shows token expiration time and organizer information if available."
+        };
         testCommand.SetHandler(async () => await TestConnectionAsync());
 
-        var getCommand = new Command("get", "Show current configuration");
+        var getCommand = new Command("get", "Display current configuration settings")
+        {
+            Description = "Shows your current profile, API credentials (masked), authentication status, " +
+                         "and other configuration settings like default format and page size."
+        };
         getCommand.SetHandler(async () => await ShowConfigAsync());
 
-        var profilesCommand = new Command("profiles", "Manage configuration profiles");
+        var profilesCommand = new Command("profiles", "Manage multiple GoToWebinar account profiles")
+        {
+            Description = "Create and switch between different configuration profiles to manage multiple GoToWebinar accounts. " +
+                         "Each profile maintains its own credentials and authentication tokens."
+        };
 
-        var listProfilesCommand = new Command("list", "List all profiles");
+        var listProfilesCommand = new Command("list", "List all configured profiles")
+        {
+            Description = "Shows all available profiles, marking the current active profile with an asterisk (*) " +
+                         "and indicating authentication status for each."
+        };
         listProfilesCommand.SetHandler(async () => await ListProfilesAsync());
 
-        var switchProfileCommand = new Command("switch", "Switch to a different profile");
-        var profileNameArg = new Argument<string>("name", "Profile name to switch to");
+        var switchProfileCommand = new Command("switch", "Switch to a different profile")
+        {
+            Description = "Change the active profile to use a different set of credentials and authentication. " +
+                         "The profile must already exist (created via 'config set --profile <name>')."
+        };
+        var profileNameArg = new Argument<string>("name", "Name of the profile to switch to");
         switchProfileCommand.AddArgument(profileNameArg);
         switchProfileCommand.SetHandler(async (string name) => await SwitchProfileAsync(name), profileNameArg);
 
         profilesCommand.AddCommand(listProfilesCommand);
         profilesCommand.AddCommand(switchProfileCommand);
 
-        var authCommand = new Command("auth", "Authenticate with GoToWebinar");
+        var authCommand = new Command("auth", "Authenticate with GoToWebinar using OAuth2 flow")
+        {
+            Description = "Opens your browser to authenticate with GoToWebinar. " +
+                         "Requires client ID and secret to be configured first via 'config set'. " +
+                         "The OAuth callback will be handled on http://localhost:7878/callback"
+        };
         authCommand.SetHandler(async () => await AuthenticateAsync());
 
         AddCommand(setCommand);
