@@ -7,20 +7,20 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <VersionPrefix>1.0.0-beta4</VersionPrefix>
-    <PackageReleaseNotes>Repository migration and installation fix update
+    <VersionPrefix>1.2.3</VersionPrefix>
+    <PackageReleaseNotes>Configuration validation improvements
 
-**Critical Bug Fixes:**
-- **Fixed repository references for installation and updates** - Resolved installation failures caused by outdated repository references (#19)
-  - Updated installation scripts (install.ps1 and install.sh) to use new repository location: Aaronontheweb/gotowebinar-cli
-  - Modified UpdateService to use correct GitHub API endpoint for the new repository
-  - Enhanced UpdateService to fetch all releases instead of just the latest for better version comparison
-  - Ensures users can successfully install and update the tool from the new repository location
+**Bug Fixes:**
+- **Enhanced config set command validation** - Improved OAuth credential configuration with better validation and user guidance (#21)
+  - Now requires at least one OAuth credential (client-id or client-secret) when using `config set`
+  - Added helpful warning messages when only partial credentials are provided
+  - Provides clear usage instructions when validation fails
+  - Prevents setting empty configuration states that would cause authentication failures
 
-**Impact for Users:**
-- Users with existing installations will now receive updates from the correct repository
-- New installations will download from the proper location
-- All installation scripts now point to the active repository</PackageReleaseNotes>
+**User Experience Improvements:**
+- Better error messaging guides users through proper OAuth credential setup
+- Clear validation prevents common configuration mistakes
+- Improved command usability with helpful warnings and usage instructions</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Visual Studio C# settings -->

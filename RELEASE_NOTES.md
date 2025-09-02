@@ -1,3 +1,21 @@
+#### 1.2.3 September 2nd 2025 ####
+
+Configuration validation improvements
+
+**Bug Fixes:**
+- **Enhanced config set command validation** - Improved OAuth credential configuration with better validation and user guidance ([#21](https://github.com/Aaronontheweb/gotowebinar-cli/pull/21))
+  - Now requires at least one OAuth credential (client-id or client-secret) when using `config set`
+  - Added helpful warning messages when only partial credentials are provided
+  - Provides clear usage instructions when validation fails
+  - Prevents setting empty configuration states that would cause authentication failures
+
+**User Experience Improvements:**
+- Better error messaging guides users through proper OAuth credential setup
+- Clear validation prevents common configuration mistakes
+- Improved command usability with helpful warnings and usage instructions
+
+---
+
 #### 1.0.0-beta4 September 2nd 2025 ####
 
 Repository migration and installation fix update
