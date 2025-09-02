@@ -12,7 +12,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Configuration
-$Repo = "stannardlabs/gotowebinar-cli"
+$Repo = "Aaronontheweb/gotowebinar-cli"
 $Platform = "win-x64"
 
 # Colors for output

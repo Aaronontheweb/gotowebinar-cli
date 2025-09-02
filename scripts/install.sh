@@ -5,7 +5,7 @@ set -e
 # GoToWebinar CLI Installation Script
 # This script downloads and installs the GoToWebinar CLI tool
 
-REPO="stannardlabs/gotowebinar-cli"
+REPO="Aaronontheweb/gotowebinar-cli"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="gotowebinar"
 
