@@ -26,6 +26,16 @@ public sealed class PagedResponse<T>
     public PageInfo? Page { get; set; }
 }
 
+public sealed class SimplePagedResponse<T>
+{
+    [JsonPropertyName("page")]
+    public PageInfo? Page { get; set; }
+    
+    // For when the items are at the root level
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
+}
+
 public sealed class EmbeddedData<T>
 {
     [JsonPropertyName("webinars")]

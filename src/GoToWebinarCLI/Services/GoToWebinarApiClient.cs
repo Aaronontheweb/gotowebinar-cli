@@ -111,7 +111,19 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
             }
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var webinars = JsonSerializer.Deserialize(content, _jsonContext.ListWebinar);
+            
+            // Check if response contains _embedded structure
+            List<Webinar>? webinars;
+            if (content.Contains("\"_embedded\""))
+            {
+                var pagedResponse = JsonSerializer.Deserialize(content, _jsonContext.PagedResponseWebinar);
+                webinars = pagedResponse?.Embedded?.Webinars;
+            }
+            else
+            {
+                // Empty response just has page info
+                webinars = new List<Webinar>();
+            }
 
             _cache[cacheKey] = (DateTime.UtcNow.Add(_cacheExpiry), content);
 

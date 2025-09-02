@@ -91,11 +91,6 @@ public class AuthenticationService
         {
             listener.Start();
             Console.WriteLine("Opening browser for authentication...");
-            
-            Console.WriteLine("\n=== DEBUG: About to open browser ===");
-            Console.WriteLine($"URL being opened: {authUrl}");
-            Console.WriteLine("=====================================\n");
-            
             OpenBrowser(authUrl);
 
             Console.WriteLine($"Waiting for callback on {RedirectUri}");
@@ -117,21 +112,11 @@ public class AuthenticationService
             var request = context.Request;
             var response = context.Response;
 
-            Console.WriteLine("\n=== DEBUG: Callback Received ===");
-            Console.WriteLine($"Full callback URL: {request.Url}");
-            Console.WriteLine($"Query string: {request.Url?.Query}");
-
             var query = HttpUtility.ParseQueryString(request.Url?.Query ?? string.Empty);
             var code = query["code"];
             var returnedState = query["state"];
             var error = query["error"];
             var errorDescription = query["error_description"];
-
-            Console.WriteLine($"Code: {(string.IsNullOrEmpty(code) ? "(none)" : code?.Substring(0, Math.Min(code.Length, 10)) + "...")}");
-            Console.WriteLine($"State: {(string.IsNullOrEmpty(returnedState) ? "(none)" : returnedState)}");
-            Console.WriteLine($"Error: {(string.IsNullOrEmpty(error) ? "(none)" : error)}");
-            Console.WriteLine($"Error Description: {(string.IsNullOrEmpty(errorDescription) ? "(none)" : errorDescription)}");
-            Console.WriteLine("=================================\n");
 
             if (!string.IsNullOrEmpty(error))
             {
@@ -170,15 +155,6 @@ public class AuthenticationService
             parameters.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
 
         var fullUrl = $"{AuthorizationEndpoint}?{queryString}";
-        
-        // Log the exact URL being generated
-        Console.WriteLine("\n=== DEBUG: Authorization URL Details ===");
-        Console.WriteLine($"Client ID: {clientId}");
-        Console.WriteLine($"Redirect URI: {RedirectUri}");
-        Console.WriteLine($"State: {state}");
-        Console.WriteLine($"Full URL: {fullUrl}");
-        Console.WriteLine("========================================\n");
-        
         return fullUrl;
     }
 
@@ -188,13 +164,6 @@ public class AuthenticationService
         string clientSecret,
         CancellationToken cancellationToken)
     {
-        Console.WriteLine("\n=== DEBUG: Token Exchange Request ===");
-        Console.WriteLine($"Token Endpoint: {TokenEndpoint}");
-        Console.WriteLine($"Client ID: {clientId}");
-        Console.WriteLine($"Redirect URI: {RedirectUri}");
-        Console.WriteLine($"Code: {code?.Substring(0, Math.Min(code.Length, 10))}...");
-        Console.WriteLine("=====================================\n");
-
         var formData = new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
@@ -211,15 +180,8 @@ public class AuthenticationService
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", basicAuth);
             request.Content = formData;
             
-            Console.WriteLine($"Using Basic Auth: {clientId}:****");
-            
             var response = await _httpClient.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            
-            Console.WriteLine($"\n=== DEBUG: Token Response ===");
-            Console.WriteLine($"Status Code: {response.StatusCode}");
-            Console.WriteLine($"Response: {content}");
-            Console.WriteLine("=============================\n");
 
             if (!response.IsSuccessStatusCode)
             {
