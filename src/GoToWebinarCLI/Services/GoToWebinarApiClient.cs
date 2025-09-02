@@ -273,6 +273,114 @@ public class GoToWebinarApiClient : IDisposable
         }
     }
 
+    public async Task<Registrant?> GetRegistrantAsync(
+        string webinarKey,
+        string registrantKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureAuthenticatedAsync(cancellationToken))
+            return null;
+
+        var config = await _configService.GetConfigAsync();
+        var profile = config.GetCurrentProfile();
+
+        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}/registrants/{registrantKey}";
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await HandleErrorResponseAsync(response);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var registrant = JsonSerializer.Deserialize(content, _jsonContext.Registrant);
+
+            return registrant;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Failed to get registrant - {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<Registrant?> AddRegistrantAsync(
+        string webinarKey,
+        CreateRegistrantRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureAuthenticatedAsync(cancellationToken))
+            return null;
+
+        var config = await _configService.GetConfigAsync();
+        var profile = config.GetCurrentProfile();
+
+        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}/registrants";
+
+        try
+        {
+            var json = JsonSerializer.Serialize(request, _jsonContext.CreateRegistrantRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(url, content, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await HandleErrorResponseAsync(response);
+                return null;
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var registrant = JsonSerializer.Deserialize(responseContent, _jsonContext.Registrant);
+
+            ClearCache();
+
+            return registrant;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Failed to add registrant - {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> RemoveRegistrantAsync(
+        string webinarKey,
+        string registrantKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureAuthenticatedAsync(cancellationToken))
+            return false;
+
+        var config = await _configService.GetConfigAsync();
+        var profile = config.GetCurrentProfile();
+
+        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}/registrants/{registrantKey}";
+
+        try
+        {
+            var response = await _httpClient.DeleteAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await HandleErrorResponseAsync(response);
+                return false;
+            }
+
+            ClearCache();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Failed to remove registrant - {ex.Message}");
+            return false;
+        }
+    }
+
     public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
         if (!await EnsureAuthenticatedAsync(cancellationToken))
