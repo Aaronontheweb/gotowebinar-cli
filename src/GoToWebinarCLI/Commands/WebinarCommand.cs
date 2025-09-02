@@ -18,23 +18,23 @@ public sealed class WebinarCommand : Command
     private static Command CreateListCommand()
     {
         var command = new Command("list", "List webinars");
-        
+
         var allOption = new Option<bool>(
             new[] { "--all", "-a" },
             "Show all webinars (past and future)");
-        
+
         var pastOption = new Option<bool>(
             new[] { "--past", "-p" },
             "Show only past webinars");
-        
+
         var fromOption = new Option<DateTime?>(
             new[] { "--from", "-f" },
             "Start date (YYYY-MM-DD)");
-        
+
         var toOption = new Option<DateTime?>(
             new[] { "--to", "-t" },
             "End date (YYYY-MM-DD)");
-        
+
         var formatOption = new Option<string>(
             new[] { "--format" },
             () => "table",
@@ -50,11 +50,11 @@ public sealed class WebinarCommand : Command
         {
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
-            
+
             // Determine date range based on flags
             DateTime? startDate = from;
             DateTime? endDate = to;
-            
+
             if (!from.HasValue || !to.HasValue)
             {
                 if (all)
@@ -73,9 +73,9 @@ public sealed class WebinarCommand : Command
                     endDate = to ?? DateTime.UtcNow.AddYears(1);
                 }
             }
-            
+
             var webinars = await apiClient.GetWebinarsAsync(true, startDate, endDate);
-            
+
             if (webinars == null || webinars.Count == 0)
             {
                 Console.WriteLine("No webinars found.");
@@ -88,7 +88,7 @@ public sealed class WebinarCommand : Command
                     var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions { WriteIndented = true });
                     Console.WriteLine(JsonSerializer.Serialize(webinars, jsonContext.ListWebinar));
                     break;
-                    
+
                 case "csv":
                     Console.WriteLine("WebinarKey,Subject,StartTime,EndTime,Registrants,InSession");
                     foreach (var webinar in webinars)
@@ -98,17 +98,17 @@ public sealed class WebinarCommand : Command
                         Console.WriteLine($"{webinar.WebinarKey},{EscapeCsv(webinar.Subject)},{startTime},{endTime},{webinar.NumberOfRegistrants ?? 0},{webinar.InSession}");
                     }
                     break;
-                    
+
                 default: // table
                     Console.WriteLine($"{"Key",-15} {"Subject",-40} {"Start Time",-20} {"Registrants",-12} {"Status",-10}");
                     Console.WriteLine(new string('-', 100));
-                    
+
                     foreach (var webinar in webinars)
                     {
                         var startTime = webinar.Times?.FirstOrDefault()?.StartTime.ToString("yyyy-MM-dd HH:mm") ?? "Not scheduled";
                         var status = webinar.InSession ? "In Session" : "Scheduled";
                         var subject = webinar.Subject.Length > 40 ? webinar.Subject[..37] + "..." : webinar.Subject;
-                        
+
                         Console.WriteLine($"{webinar.WebinarKey,-15} {subject,-40} {startTime,-20} {webinar.NumberOfRegistrants ?? 0,-12} {status,-10}");
                     }
                     break;
@@ -121,7 +121,7 @@ public sealed class WebinarCommand : Command
     private static Command CreateGetCommand()
     {
         var command = new Command("get", "Get webinar details");
-        
+
         var keyArgument = new Argument<string>("webinar-key", "The webinar key");
         var formatOption = new Option<string>(
             new[] { "--format" },
@@ -135,9 +135,9 @@ public sealed class WebinarCommand : Command
         {
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
-            
+
             var webinar = await apiClient.GetWebinarAsync(key);
-            
+
             if (webinar == null)
             {
                 Console.WriteLine($"Webinar {key} not found.");
@@ -151,7 +151,7 @@ public sealed class WebinarCommand : Command
                     var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions { WriteIndented = true });
                     Console.WriteLine(JsonSerializer.Serialize(webinar, jsonContext.Webinar));
                     break;
-                    
+
                 default: // detail
                     Console.WriteLine($"Webinar Details");
                     Console.WriteLine($"===============");
@@ -162,7 +162,7 @@ public sealed class WebinarCommand : Command
                     Console.WriteLine($"In Session:       {(webinar.InSession ? "Yes" : "No")}");
                     Console.WriteLine($"Registrants:      {webinar.NumberOfRegistrants ?? 0}");
                     Console.WriteLine($"Registration URL: {webinar.RegistrationUrl ?? "N/A"}");
-                    
+
                     if (webinar.Times != null && webinar.Times.Count > 0)
                     {
                         Console.WriteLine($"\nScheduled Times:");
@@ -171,7 +171,7 @@ public sealed class WebinarCommand : Command
                             Console.WriteLine($"  {time.StartTime:yyyy-MM-dd HH:mm} - {time.EndTime:HH:mm}");
                         }
                     }
-                    
+
                     if (webinar.RegistrationLimit.HasValue)
                     {
                         Console.WriteLine($"\nRegistration Limit: {webinar.RegistrationLimit}");
@@ -186,26 +186,26 @@ public sealed class WebinarCommand : Command
     private static Command CreateCreateCommand()
     {
         var command = new Command("create", "Create a new webinar");
-        
+
         var subjectOption = new Option<string>(
             new[] { "--subject", "-s" },
             "Webinar subject/title")
         { IsRequired = true };
-        
+
         var descriptionOption = new Option<string?>(
             new[] { "--description", "-d" },
             "Webinar description");
-        
+
         var startTimeOption = new Option<DateTime>(
             new[] { "--start", "--start-time" },
             "Start time (YYYY-MM-DD HH:MM)")
         { IsRequired = true };
-        
+
         var durationOption = new Option<int>(
             new[] { "--duration" },
             () => 60,
             "Duration in minutes");
-        
+
         var timeZoneOption = new Option<string>(
             new[] { "--timezone", "-tz" },
             () => "America/New_York",
@@ -221,7 +221,7 @@ public sealed class WebinarCommand : Command
         {
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
-            
+
             var request = new CreateWebinarRequest
             {
                 Subject = subject,
@@ -236,9 +236,9 @@ public sealed class WebinarCommand : Command
                     }
                 }
             };
-            
+
             var webinar = await apiClient.CreateWebinarAsync(request);
-            
+
             if (webinar == null)
             {
                 Console.WriteLine("Failed to create webinar.");
@@ -258,7 +258,7 @@ public sealed class WebinarCommand : Command
     private static Command CreateDeleteCommand()
     {
         var command = new Command("delete", "Delete a webinar");
-        
+
         var keyArgument = new Argument<string>("webinar-key", "The webinar key to delete");
         var forceOption = new Option<bool>(
             new[] { "--force", "-f" },
@@ -273,7 +273,7 @@ public sealed class WebinarCommand : Command
             {
                 Console.Write($"Are you sure you want to delete webinar {key}? [y/N]: ");
                 var response = Console.ReadLine()?.Trim().ToLowerInvariant();
-                
+
                 if (response != "y" && response != "yes")
                 {
                     Console.WriteLine("Deletion cancelled.");
@@ -283,9 +283,9 @@ public sealed class WebinarCommand : Command
 
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
-            
+
             var success = await apiClient.DeleteWebinarAsync(key);
-            
+
             if (success)
             {
                 Console.WriteLine($"✓ Webinar {key} deleted successfully.");
@@ -309,3 +309,4 @@ public sealed class WebinarCommand : Command
         return value;
     }
 }
+

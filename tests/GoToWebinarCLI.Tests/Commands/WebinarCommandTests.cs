@@ -43,11 +43,11 @@ public class WebinarCommandTests
         // Act
         // Note: In real implementation, we'd need to inject the mock API client
         // For now, this test structure shows the intent
-        
+
         // Assert
         webinars.Should().HaveCount(3);
         webinars[0].Subject.Should().Be("Test Webinar 1");
-        
+
         return Task.CompletedTask;
     }
 
@@ -242,3 +242,4 @@ public class TestStreamWriter : TextWriter, IStandardStreamWriter
             _output.AppendLine(value);
     }
 }
+

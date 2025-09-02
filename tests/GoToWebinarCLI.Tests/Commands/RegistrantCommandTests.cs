@@ -198,3 +198,4 @@ public class RegistrantCommandTests
         result.Should().BeEmpty();
     }
 }
+

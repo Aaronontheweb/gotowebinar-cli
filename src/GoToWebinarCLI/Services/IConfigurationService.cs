@@ -11,3 +11,4 @@ public interface IConfigurationService
     void SetCurrentProfile(string profileName);
     string GetConfigPath();
 }
+

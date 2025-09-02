@@ -18,13 +18,13 @@ public sealed class RegistrantCommand : Command
     private static Command CreateListCommand()
     {
         var command = new Command("list", "List registrants for a webinar");
-        
+
         var webinarKeyArgument = new Argument<string>("webinar-key", "The webinar key");
         var formatOption = new Option<string>(
             new[] { "--format" },
             () => "table",
             "Output format (table, json, csv)");
-        
+
         var statusOption = new Option<string?>(
             new[] { "--status", "-s" },
             "Filter by status (approved, denied, pending)");
@@ -37,9 +37,9 @@ public sealed class RegistrantCommand : Command
         {
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
-            
+
             var registrants = await apiClient.GetRegistrantsAsync(webinarKey);
-            
+
             if (registrants == null || registrants.Count == 0)
             {
                 Console.WriteLine($"No registrants found for webinar {webinarKey}.");
@@ -49,7 +49,7 @@ public sealed class RegistrantCommand : Command
             // Filter by status if provided
             if (!string.IsNullOrEmpty(status))
             {
-                registrants = registrants.Where(r => 
+                registrants = registrants.Where(r =>
                     r.Status?.Equals(status, StringComparison.OrdinalIgnoreCase) == true).ToList();
             }
 
@@ -59,7 +59,7 @@ public sealed class RegistrantCommand : Command
                     var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions { WriteIndented = true });
                     Console.WriteLine(JsonSerializer.Serialize(registrants, jsonContext.ListRegistrant));
                     break;
-                    
+
                 case "csv":
                     Console.WriteLine("RegistrantKey,FirstName,LastName,Email,Status,RegisteredAt,JoinUrl");
                     foreach (var reg in registrants)
@@ -67,20 +67,20 @@ public sealed class RegistrantCommand : Command
                         Console.WriteLine($"{reg.RegistrantKey},{EscapeCsv(reg.FirstName)},{EscapeCsv(reg.LastName)},{reg.Email},{reg.Status},{reg.RegistrationDate:yyyy-MM-dd HH:mm},{reg.JoinUrl ?? ""}");
                     }
                     break;
-                    
+
                 default: // table
                     Console.WriteLine($"{"Key",-15} {"Name",-30} {"Email",-35} {"Status",-10} {"Registered",-20}");
                     Console.WriteLine(new string('-', 110));
-                    
+
                     foreach (var reg in registrants)
                     {
                         var name = $"{reg.FirstName} {reg.LastName}";
                         if (name.Length > 30) name = name[..27] + "...";
                         var email = reg.Email.Length > 35 ? reg.Email[..32] + "..." : reg.Email;
-                        
+
                         Console.WriteLine($"{reg.RegistrantKey,-15} {name,-30} {email,-35} {reg.Status ?? "N/A",-10} {reg.RegistrationDate:yyyy-MM-dd HH:mm}");
                     }
-                    
+
                     Console.WriteLine($"\nTotal: {registrants.Count} registrant(s)");
                     break;
             }
@@ -92,27 +92,27 @@ public sealed class RegistrantCommand : Command
     private static Command CreateAddCommand()
     {
         var command = new Command("add", "Add a registrant to a webinar");
-        
+
         var webinarKeyArgument = new Argument<string>("webinar-key", "The webinar key");
         var firstNameOption = new Option<string>(
             new[] { "--first-name", "-f" },
             "First name")
         { IsRequired = true };
-        
+
         var lastNameOption = new Option<string>(
             new[] { "--last-name", "-l" },
             "Last name")
         { IsRequired = true };
-        
+
         var emailOption = new Option<string>(
             new[] { "--email", "-e" },
             "Email address")
         { IsRequired = true };
-        
+
         var organizationOption = new Option<string?>(
             new[] { "--organization", "-o" },
             "Organization name");
-        
+
         var phoneOption = new Option<string?>(
             new[] { "--phone", "-p" },
             "Phone number");
@@ -128,7 +128,7 @@ public sealed class RegistrantCommand : Command
         {
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
-            
+
             var registrant = await apiClient.AddRegistrantAsync(webinarKey, new CreateRegistrantRequest
             {
                 FirstName = firstName,
@@ -137,7 +137,7 @@ public sealed class RegistrantCommand : Command
                 Organization = organization,
                 Phone = phone
             });
-            
+
             if (registrant == null)
             {
                 Console.WriteLine("Failed to add registrant.");
@@ -150,7 +150,7 @@ public sealed class RegistrantCommand : Command
             Console.WriteLine($"  Name: {registrant.FirstName} {registrant.LastName}");
             Console.WriteLine($"  Email: {registrant.Email}");
             Console.WriteLine($"  Status: {registrant.Status}");
-            
+
             if (!string.IsNullOrEmpty(registrant.JoinUrl))
             {
                 Console.WriteLine($"  Join URL: {registrant.JoinUrl}");
@@ -163,7 +163,7 @@ public sealed class RegistrantCommand : Command
     private static Command CreateRemoveCommand()
     {
         var command = new Command("remove", "Remove a registrant from a webinar");
-        
+
         var webinarKeyArgument = new Argument<string>("webinar-key", "The webinar key");
         var registrantKeyArgument = new Argument<string>("registrant-key", "The registrant key");
         var forceOption = new Option<bool>(
@@ -180,7 +180,7 @@ public sealed class RegistrantCommand : Command
             {
                 Console.Write($"Are you sure you want to remove registrant {registrantKey}? [y/N]: ");
                 var response = Console.ReadLine()?.Trim().ToLowerInvariant();
-                
+
                 if (response != "y" && response != "yes")
                 {
                     Console.WriteLine("Removal cancelled.");
@@ -190,9 +190,9 @@ public sealed class RegistrantCommand : Command
 
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
-            
+
             var success = await apiClient.RemoveRegistrantAsync(webinarKey, registrantKey);
-            
+
             if (success)
             {
                 Console.WriteLine($"✓ Registrant {registrantKey} removed successfully.");
@@ -210,7 +210,7 @@ public sealed class RegistrantCommand : Command
     private static Command CreateGetCommand()
     {
         var command = new Command("get", "Get registrant details");
-        
+
         var webinarKeyArgument = new Argument<string>("webinar-key", "The webinar key");
         var registrantKeyArgument = new Argument<string>("registrant-key", "The registrant key");
         var formatOption = new Option<string>(
@@ -226,9 +226,9 @@ public sealed class RegistrantCommand : Command
         {
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
-            
+
             var registrant = await apiClient.GetRegistrantAsync(webinarKey, registrantKey);
-            
+
             if (registrant == null)
             {
                 Console.WriteLine($"Registrant {registrantKey} not found.");
@@ -242,7 +242,7 @@ public sealed class RegistrantCommand : Command
                     var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions { WriteIndented = true });
                     Console.WriteLine(JsonSerializer.Serialize(registrant, jsonContext.Registrant));
                     break;
-                    
+
                 default: // detail
                     Console.WriteLine($"Registrant Details");
                     Console.WriteLine($"==================");
@@ -253,12 +253,12 @@ public sealed class RegistrantCommand : Command
                     Console.WriteLine($"Phone:            {registrant.Phone ?? "N/A"}");
                     Console.WriteLine($"Status:           {registrant.Status ?? "N/A"}");
                     Console.WriteLine($"Registered:       {registrant.RegistrationDate:yyyy-MM-dd HH:mm:ss}");
-                    
+
                     if (!string.IsNullOrEmpty(registrant.JoinUrl))
                     {
                         Console.WriteLine($"Join URL:         {registrant.JoinUrl}");
                     }
-                    
+
                     if (registrant.Responses != null && registrant.Responses.Count > 0)
                     {
                         Console.WriteLine($"\nCustom Responses:");
@@ -283,3 +283,4 @@ public sealed class RegistrantCommand : Command
         return value;
     }
 }
+

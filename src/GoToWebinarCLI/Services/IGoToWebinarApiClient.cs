@@ -37,3 +37,4 @@ public interface IGoToWebinarApiClient : IDisposable
 
     Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default);
 }
+
