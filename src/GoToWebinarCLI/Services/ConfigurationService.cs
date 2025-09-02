@@ -7,7 +7,7 @@ using GoToWebinarCLI.Models;
 
 namespace GoToWebinarCLI.Services;
 
-public sealed class ConfigurationService
+public sealed class ConfigurationService : IConfigurationService
 {
     private readonly string _configPath;
     private readonly GoToWebinarJsonContext _jsonContext;
@@ -255,4 +255,6 @@ public sealed class ConfigurationService
         {
         }
     }
+
+    public string GetConfigPath() => _configPath;
 }

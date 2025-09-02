@@ -11,7 +11,7 @@ using GoToWebinarCLI.Models;
 
 namespace GoToWebinarCLI.Services;
 
-public class GoToWebinarApiClient : IDisposable
+public class GoToWebinarApiClient : IGoToWebinarApiClient
 {
     private const string BaseUrl = "https://api.getgo.com/G2W/rest/v2/";
     private readonly HttpClient _httpClient;

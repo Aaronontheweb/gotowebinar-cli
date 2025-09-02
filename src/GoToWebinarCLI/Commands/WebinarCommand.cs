@@ -19,10 +19,13 @@ public sealed class WebinarCommand : Command
     {
         var command = new Command("list", "List webinars");
         
-        var upcomingOption = new Option<bool>(
-            new[] { "--upcoming", "-u" },
-            () => true,
-            "Show only upcoming webinars");
+        var allOption = new Option<bool>(
+            new[] { "--all", "-a" },
+            "Show all webinars (past and future)");
+        
+        var pastOption = new Option<bool>(
+            new[] { "--past", "-p" },
+            "Show only past webinars");
         
         var fromOption = new Option<DateTime?>(
             new[] { "--from", "-f" },
@@ -37,17 +40,41 @@ public sealed class WebinarCommand : Command
             () => "table",
             "Output format (table, json, csv)");
 
-        command.AddOption(upcomingOption);
+        command.AddOption(allOption);
+        command.AddOption(pastOption);
         command.AddOption(fromOption);
         command.AddOption(toOption);
         command.AddOption(formatOption);
 
-        command.SetHandler(async (upcoming, from, to, format) =>
+        command.SetHandler(async (all, past, from, to, format) =>
         {
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
             
-            var webinars = await apiClient.GetWebinarsAsync(upcoming, from, to);
+            // Determine date range based on flags
+            DateTime? startDate = from;
+            DateTime? endDate = to;
+            
+            if (!from.HasValue || !to.HasValue)
+            {
+                if (all)
+                {
+                    startDate = from ?? DateTime.UtcNow.AddYears(-2);
+                    endDate = to ?? DateTime.UtcNow.AddYears(2);
+                }
+                else if (past)
+                {
+                    startDate = from ?? DateTime.UtcNow.AddYears(-2);
+                    endDate = to ?? DateTime.UtcNow;
+                }
+                else // Default: upcoming
+                {
+                    startDate = from ?? DateTime.UtcNow;
+                    endDate = to ?? DateTime.UtcNow.AddYears(1);
+                }
+            }
+            
+            var webinars = await apiClient.GetWebinarsAsync(true, startDate, endDate);
             
             if (webinars == null || webinars.Count == 0)
             {
@@ -86,7 +113,7 @@ public sealed class WebinarCommand : Command
                     }
                     break;
             }
-        }, upcomingOption, fromOption, toOption, formatOption);
+        }, allOption, pastOption, fromOption, toOption, formatOption);
 
         return command;
     }
