@@ -54,6 +54,15 @@ public sealed class ConfigCommand : Command
 
     private static async Task SetConfigAsync(string? clientId, string? clientSecret, string profile)
     {
+        // Validate that at least one credential is provided
+        if (string.IsNullOrEmpty(clientId) && string.IsNullOrEmpty(clientSecret))
+        {
+            Console.WriteLine("❌ Error: You must provide at least one of --client-id or --client-secret");
+            Console.WriteLine("Usage: gotowebinar config set --client-id <id> --client-secret <secret> [--profile <name>]");
+            Environment.Exit(1);
+            return;
+        }
+
         var configService = new ConfigurationService();
         var config = await configService.LoadConfigAsync();
 
@@ -62,6 +71,10 @@ public sealed class ConfigCommand : Command
             configProfile = new ConfigProfile();
             config.Profiles[profile] = configProfile;
         }
+
+        // When setting new credentials, warn if only one is provided and the other is missing
+        bool hasExistingClientId = !string.IsNullOrEmpty(configProfile.ClientId);
+        bool hasExistingClientSecret = !string.IsNullOrEmpty(configProfile.ClientSecret);
 
         if (!string.IsNullOrEmpty(clientId))
         {
@@ -73,6 +86,24 @@ public sealed class ConfigCommand : Command
         {
             configProfile.ClientSecret = clientSecret;
             Console.WriteLine($"✓ Client Secret set for profile '{profile}'");
+        }
+
+        // Check if both credentials are now present
+        bool nowHasClientId = !string.IsNullOrEmpty(configProfile.ClientId);
+        bool nowHasClientSecret = !string.IsNullOrEmpty(configProfile.ClientSecret);
+
+        if (!nowHasClientId || !nowHasClientSecret)
+        {
+            Console.WriteLine("⚠ Warning: Both client ID and client secret are required for authentication.");
+            if (!nowHasClientId)
+            {
+                Console.WriteLine("  Missing: Client ID");
+            }
+            if (!nowHasClientSecret)
+            {
+                Console.WriteLine("  Missing: Client Secret");
+            }
+            Console.WriteLine("  Run 'gotowebinar config set' with the missing credential(s) to complete the configuration.");
         }
 
         configService.SetCurrentProfile(profile);
