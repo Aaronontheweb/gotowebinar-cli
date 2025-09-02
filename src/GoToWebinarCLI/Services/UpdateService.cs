@@ -9,7 +9,7 @@ public sealed class UpdateService
 {
     private readonly HttpClient _httpClient;
     private readonly string _currentVersion;
-    private const string GitHubApiUrl = "https://api.github.com/repos/stannardlabs/gotowebinar-cli/releases/latest";
+    private const string GitHubApiUrl = "https://api.github.com/repos/Aaronontheweb/gotowebinar-cli/releases";
 
     public UpdateService(HttpClient httpClient, string currentVersion)
     {
@@ -28,7 +28,13 @@ public sealed class UpdateService
         try
         {
             var response = await _httpClient.GetStringAsync(GitHubApiUrl);
-            var releaseJson = JsonNode.Parse(response);
+            var releasesJson = JsonNode.Parse(response)?.AsArray();
+            
+            if (releasesJson == null || releasesJson.Count == 0)
+                return null;
+
+            // Get the first release (most recent, including pre-releases)
+            var releaseJson = releasesJson[0];
 
             if (releaseJson == null)
                 return null;
