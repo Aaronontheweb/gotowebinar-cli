@@ -1,3 +1,21 @@
+#### 1.0.0-beta3 September 2nd 2025 ####
+
+Critical update service fix with improved reliability
+
+**Bug Fixes:**
+- **Fixed update service to use GitHub Releases API** - Resolved update check failures caused by non-existent version.json endpoint ([#17](https://github.com/Aaronontheweb/gotowebinar-cli/pull/17))
+  - Now correctly queries GitHub's Releases API for version checks
+  - Added proper User-Agent header required by GitHub API
+  - Improved semantic versioning comparison with pre-release support
+  - Fixed asset names to match actual release artifacts
+  - Removed unused VersionManifest and DownloadUrls classes
+
+**Technical Improvements:**
+- Enhanced version comparison logic to properly handle beta, alpha, and other pre-release tags
+- Streamlined update service architecture for better maintainability
+
+---
+
 #### 1.0.0-beta2 September 2nd 2025 ####
 
 Major feature expansion with complete webinar and registrant management functionality
