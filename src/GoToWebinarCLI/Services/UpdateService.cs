@@ -15,7 +15,7 @@ public sealed class UpdateService
     {
         _httpClient = httpClient;
         _currentVersion = currentVersion;
-        
+
         // Add User-Agent header required by GitHub API
         if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
         {
@@ -29,7 +29,7 @@ public sealed class UpdateService
         {
             var response = await _httpClient.GetStringAsync(GitHubApiUrl);
             var releaseJson = JsonNode.Parse(response);
-            
+
             if (releaseJson == null)
                 return null;
 
@@ -39,7 +39,7 @@ public sealed class UpdateService
 
             // Remove 'v' prefix if present
             var version = tagName.StartsWith("v") ? tagName.Substring(1) : tagName;
-            
+
             // Parse current version to handle versions with build metadata (e.g., "1.0.0-beta1+hash")
             var currentVersionClean = _currentVersion.Split('+')[0];
 
@@ -206,7 +206,7 @@ public sealed class UpdateService
                 return true;
             if (!string.IsNullOrEmpty(newParts.PreRelease) && string.IsNullOrEmpty(currentParts.PreRelease))
                 return false;
-            
+
             // If both have pre-release, compare them
             if (!string.IsNullOrEmpty(newParts.PreRelease) && !string.IsNullOrEmpty(currentParts.PreRelease))
             {
@@ -228,7 +228,7 @@ public sealed class UpdateService
         var preRelease = dashIndex >= 0 ? version.Substring(dashIndex + 1) : "";
 
         var parts = majorPart.Split('.').Select(p => int.TryParse(p, out var num) ? num : 0).ToArray();
-        
+
         // Ensure we have at least 3 parts (major.minor.patch)
         var major = new int[3];
         for (int i = 0; i < Math.Min(parts.Length, 3); i++)
