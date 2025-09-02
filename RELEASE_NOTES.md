@@ -1,3 +1,37 @@
+#### 1.0.0-beta2 September 2nd 2025 ####
+
+Major feature expansion with complete webinar and registrant management functionality
+
+**New Features:**
+- **Complete webinar management commands** - Full CRUD operations for webinars
+  - `list` - List webinars with support for --all, --past flags and date filtering
+  - `get` - Get detailed webinar information
+  - `create` - Create new webinars with scheduling
+  - `delete` - Delete webinars with confirmation prompts
+- **Complete registrant management commands** - Comprehensive registrant handling
+  - `list` - List registrants with status filtering
+  - `get` - Get detailed registrant information
+  - `add` - Add new registrants to webinars
+  - `remove` - Remove registrants from webinars
+- **Multiple output formats** - Support for table, JSON, and CSV output formats
+- **Comprehensive API credential documentation** - Step-by-step guide for obtaining GoToWebinar API credentials
+
+**Improvements:**
+- **Enhanced command usability** - Replaced confusing `--upcoming` flag with clearer `--all` and `--past` flags
+- **Robust testing infrastructure** - Added 16 unit tests with Moq and FluentAssertions for comprehensive coverage
+- **AOT compilation compatibility** - Ensured all new commands work with native AOT compilation
+
+**Security Updates:**
+- Updated Microsoft.Extensions.Http.Polly from 9.0.0 to 9.0.8
+- Updated System.Security.Cryptography.ProtectedData from 9.0.0 to 9.0.8
+
+**Developer Experience:**
+- Added interfaces (IGoToWebinarApiClient, IConfigurationService) for dependency injection
+- Implemented test data builders for consistent test fixtures
+- Enhanced error handling for API failures
+
+---
+
 #### 1.0.0-beta1 September 2nd 2025 ####
 
 Initial beta release of the completely rewritten GoToWebinar CLI
