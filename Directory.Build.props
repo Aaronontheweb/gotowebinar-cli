@@ -7,20 +7,20 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <VersionPrefix>1.0.0-beta4</VersionPrefix>
-    <PackageReleaseNotes>Repository migration and installation fix update
+    <VersionPrefix>1.0.0-beta5</VersionPrefix>
+    <PackageReleaseNotes>Configuration command validation improvements
 
-**Critical Bug Fixes:**
-- **Fixed repository references for installation and updates** - Resolved installation failures caused by outdated repository references (#19)
-  - Updated installation scripts (install.ps1 and install.sh) to use new repository location: Aaronontheweb/gotowebinar-cli
-  - Modified UpdateService to use correct GitHub API endpoint for the new repository
-  - Enhanced UpdateService to fetch all releases instead of just the latest for better version comparison
-  - Ensures users can successfully install and update the tool from the new repository location
+**Bug Fixes:**
+- **Fixed config set command validation** - Improved configuration setup experience with proper validation (#21)
+  - Now requires at least one OAuth credential when using config set
+  - Warns users when both client ID and secret aren't provided
+  - Added helpful usage message when no credentials are specified
+  - Improved validation to ensure proper authentication setup
 
 **Impact for Users:**
-- Users with existing installations will now receive updates from the correct repository
-- New installations will download from the proper location
-- All installation scripts now point to the active repository</PackageReleaseNotes>
+- Users will now receive clear guidance when setting up OAuth credentials
+- Prevents incomplete configuration that could lead to authentication failures
+- Better user experience with informative error messages and usage instructions</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Visual Studio C# settings -->
@@ -29,30 +29,4 @@
     <NetCoreTestVersion>net9.0</NetCoreTestVersion>
   </PropertyGroup>
   <!-- Removed Akka.Event global using as it's not needed for this project -->
-  <!-- GitHub SourceLink -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
-  </ItemGroup>
-  <!-- NuGet package properties -->
-  <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)\akkalogo.png" Pack="true" PackagePath="\" />
-    <None Include="$(MSBuildThisFileDirectory)\README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-  <!-- NuGet .nupkg options -->
-  <PropertyGroup>
-    <PackageReleaseNotes>1.5.25 June 17 2024
-
-* [Updated Akka.NET to 1.5.25](https://github.com/akkadotnet/akka.net/releases/tag/1.5.25)</PackageReleaseNotes>
-    <PackageTags>akka;actors;actor model;Akka;concurrency;test</PackageTags>
-    <PackageProjectUrl>https://github.com/akkadotnet/Akka.MultiNodeTestRunner</PackageProjectUrl>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageIcon>akkalogo.png</PackageIcon>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <!-- Optional: Embed source files that are not tracked by the source control manager in the PDB -->
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-  </PropertyGroup>
 </Project>
