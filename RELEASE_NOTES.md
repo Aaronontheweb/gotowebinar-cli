@@ -1,3 +1,21 @@
+#### 1.0.0-beta4 September 2nd 2025 ####
+
+Repository migration and installation fix update
+
+**Critical Bug Fixes:**
+- **Fixed repository references for installation and updates** - Resolved installation failures caused by outdated repository references ([#19](https://github.com/Aaronontheweb/gotowebinar-cli/pull/19))
+  - Updated installation scripts (install.ps1 and install.sh) to use new repository location: Aaronontheweb/gotowebinar-cli
+  - Modified UpdateService to use correct GitHub API endpoint for the new repository
+  - Enhanced UpdateService to fetch all releases instead of just the latest for better version comparison
+  - Ensures users can successfully install and update the tool from the new repository location
+
+**Impact for Users:**
+- Users with existing installations will now receive updates from the correct repository
+- New installations will download from the proper location
+- All installation scripts now point to the active repository
+
+---
+
 #### 1.0.0-beta3 September 2nd 2025 ####
 
 Critical update service fix with improved reliability
