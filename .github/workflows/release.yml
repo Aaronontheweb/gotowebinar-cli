@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '[0-9]*'
 
 permissions:
   contents: write
@@ -19,7 +20,9 @@ jobs:
       - name: Get version from tag
         id: get_version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          # Remove 'v' prefix if present, otherwise use tag as-is
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           # Check if this is a prerelease (contains beta, alpha, rc, etc.)
           if [[ "$VERSION" =~ (beta|alpha|rc|preview) ]]; then
