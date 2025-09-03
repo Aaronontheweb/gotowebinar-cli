@@ -175,11 +175,11 @@ public class AuthenticationService
         {
             // Use HTTP Basic Authentication for client credentials
             var basicAuth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
-            
+
             using var request = new HttpRequestMessage(HttpMethod.Post, TokenEndpoint);
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", basicAuth);
             request.Content = formData;
-            
+
             var response = await _httpClient.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
 

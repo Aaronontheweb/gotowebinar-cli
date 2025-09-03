@@ -30,7 +30,7 @@ public sealed class SimplePagedResponse<T>
 {
     [JsonPropertyName("page")]
     public PageInfo? Page { get; set; }
-    
+
     // For when the items are at the root level
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }

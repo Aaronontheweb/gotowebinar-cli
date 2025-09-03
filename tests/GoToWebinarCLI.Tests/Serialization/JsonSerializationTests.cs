@@ -49,7 +49,7 @@ public class JsonSerializationTests
 
         // Act - Serialize
         var json = JsonSerializer.Serialize(webinar, _jsonContext.Webinar);
-        
+
         // Act - Deserialize
         var deserialized = JsonSerializer.Deserialize(json, _jsonContext.Webinar);
 
@@ -114,15 +114,15 @@ public class JsonSerializationTests
         result.Page.TotalElements.Should().Be(2);
         result.Page.TotalPages.Should().Be(1);
         result.Page.Number.Should().Be(0);
-        
+
         result.Embedded.Should().NotBeNull();
         result.Embedded!.Webinars.Should().NotBeNull();
         result.Embedded.Webinars!.Should().HaveCount(2);
-        
+
         result.Embedded.Webinars![0].WebinarKey.Should().Be("key1");
         result.Embedded.Webinars[0].Subject.Should().Be("Webinar 1");
         result.Embedded.Webinars[0].Times.Should().HaveCount(1);
-        
+
         result.Embedded.Webinars[1].WebinarKey.Should().Be("key2");
         result.Embedded.Webinars[1].Subject.Should().Be("Webinar 2");
     }
@@ -263,21 +263,21 @@ public class JsonSerializationTests
         // Arrange
         var webinars = new List<Webinar>
         {
-            new Webinar 
-            { 
-                WebinarKey = "key1", 
+            new Webinar
+            {
+                WebinarKey = "key1",
                 Subject = "Webinar 1",
                 OrganizerKey = "org1"
             },
-            new Webinar 
-            { 
-                WebinarKey = "key2", 
+            new Webinar
+            {
+                WebinarKey = "key2",
                 Subject = "Webinar 2",
                 OrganizerKey = "org1"
             },
-            new Webinar 
-            { 
-                WebinarKey = "key3", 
+            new Webinar
+            {
+                WebinarKey = "key3",
                 Subject = "Webinar 3",
                 OrganizerKey = "org1"
             }
@@ -318,7 +318,7 @@ public class JsonSerializationTests
         deserialized!.StartTime.Should().Be(utcTime);
         deserialized.StartTime.Kind.Should().Be(DateTimeKind.Utc);
         deserialized.EndTime.Should().Be(utcTime.AddHours(1.5));
-        
+
         // Verify ISO 8601 format in JSON
         json.Should().Contain("2024-03-15T14:30:00Z");
     }

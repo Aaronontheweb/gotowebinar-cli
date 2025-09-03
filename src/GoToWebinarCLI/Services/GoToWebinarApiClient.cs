@@ -111,7 +111,7 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
             }
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            
+
             // Check if response contains _embedded structure
             List<Webinar>? webinars;
             if (content.Contains("\"_embedded\""))

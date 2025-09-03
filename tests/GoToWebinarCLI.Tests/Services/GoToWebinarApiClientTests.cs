@@ -31,7 +31,7 @@ public class GoToWebinarApiClientTests
         };
 
         _configService = new ConfigurationService();
-        
+
         // Setup a test configuration
         var config = new ConfigFile
         {
@@ -60,7 +60,7 @@ public class GoToWebinarApiClientTests
     {
         // Arrange
         var emptyResponse = @"{""page"":{""size"":10,""totalElements"":0,""totalPages"":0,""number"":0}}";
-        
+
         // Act & Assert
         // The API client should return an empty list when there are no webinars
         emptyResponse.Should().NotBeNull();
@@ -123,13 +123,13 @@ public class GoToWebinarApiClientTests
 
         // Act & Assert
         // Verify the response can be deserialized properly
-        var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions 
-        { 
-            PropertyNameCaseInsensitive = true 
+        var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
         });
-        
+
         var result = JsonSerializer.Deserialize(pagedResponse, jsonContext.PagedResponseWebinar);
-        
+
         result.Should().NotBeNull();
         result!.Embedded.Should().NotBeNull();
         result.Embedded!.Webinars.Should().NotBeNull();
@@ -154,9 +154,9 @@ public class GoToWebinarApiClientTests
             ""page"":{""size"":10,""totalElements"":1,""totalPages"":1,""number"":0}
         }";
 
-        var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions 
-        { 
-            PropertyNameCaseInsensitive = true 
+        var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
         });
 
         // Test empty response
