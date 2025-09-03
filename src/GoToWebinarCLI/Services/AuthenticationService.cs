@@ -116,10 +116,10 @@ public class AuthenticationService
             var code = query["code"];
             var returnedState = query["state"];
             var error = query["error"];
+            var errorDescription = query["error_description"];
 
             if (!string.IsNullOrEmpty(error))
             {
-                var errorDescription = query["error_description"];
                 await SendResponseAsync(response, $"<html><body><h1>Authentication Failed</h1><p>{errorDescription}</p></body></html>");
                 Console.WriteLine($"Error: Authentication failed - {errorDescription}");
                 return null;
@@ -154,7 +154,8 @@ public class AuthenticationService
         var queryString = string.Join("&",
             parameters.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
 
-        return $"{AuthorizationEndpoint}?{queryString}";
+        var fullUrl = $"{AuthorizationEndpoint}?{queryString}";
+        return fullUrl;
     }
 
     private async Task<OAuthToken?> ExchangeCodeForTokenAsync(
@@ -166,15 +167,20 @@ public class AuthenticationService
         var formData = new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("grant_type", "authorization_code"),
-            new KeyValuePair<string, string>("code", code),
-            new KeyValuePair<string, string>("redirect_uri", RedirectUri),
-            new KeyValuePair<string, string>("client_id", clientId),
-            new KeyValuePair<string, string>("client_secret", clientSecret)
+            new KeyValuePair<string, string>("code", code ?? string.Empty),
+            new KeyValuePair<string, string>("redirect_uri", RedirectUri)
         });
 
         try
         {
-            var response = await _httpClient.PostAsync(TokenEndpoint, formData, cancellationToken);
+            // Use HTTP Basic Authentication for client credentials
+            var basicAuth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, TokenEndpoint);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", basicAuth);
+            request.Content = formData;
+
+            var response = await _httpClient.SendAsync(request, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)
