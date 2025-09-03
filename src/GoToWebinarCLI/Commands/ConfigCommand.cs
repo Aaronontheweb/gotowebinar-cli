@@ -11,7 +11,7 @@ public sealed class ConfigCommand : Command
     {
         Description = "Configure API credentials, authenticate with GoToWebinar, and manage configuration profiles. " +
                      "Get your OAuth credentials from https://developer.goto.com/oauth-clients";
-        
+
         var setCommand = new Command("set", "Set GoToWebinar OAuth credentials")
         {
             Description = "Configure your OAuth Client ID and Client Secret obtained from the GoTo Developer Center. " +
