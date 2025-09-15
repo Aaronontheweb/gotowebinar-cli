@@ -86,12 +86,9 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
         var config = await _configService.GetConfigAsync();
         var profile = config.GetCurrentProfile();
 
+        // Always use provided dates when they are specified
         var from = fromTime ?? DateTime.UtcNow;
         var to = toTime ?? DateTime.UtcNow.AddMonths(12);
-
-        var url = $"organizers/{profile.OrganizerKey}/webinars" +
-                  $"?fromTime={from:yyyy-MM-ddTHH:mm:ssZ}" +
-                  $"&toTime={to:yyyy-MM-ddTHH:mm:ssZ}";
 
         var cacheKey = $"webinars_{upcoming}_{from:yyyyMMdd}_{to:yyyyMMdd}";
 
@@ -102,32 +99,61 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
 
         try
         {
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var allWebinars = new List<Webinar>();
+            var pageNumber = 0;
+            var pageSize = 100; // Default page size
+            var hasMorePages = true;
 
-            if (!response.IsSuccessStatusCode)
+            while (hasMorePages)
             {
-                await HandleErrorResponseAsync(response);
-                return null;
+                var url = $"organizers/{profile.OrganizerKey}/webinars" +
+                          $"?fromTime={from:yyyy-MM-ddTHH:mm:ssZ}" +
+                          $"&toTime={to:yyyy-MM-ddTHH:mm:ssZ}" +
+                          $"&page={pageNumber}" +
+                          $"&size={pageSize}";
+
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    await HandleErrorResponseAsync(response);
+                    return null;
+                }
+
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                // Check if response contains _embedded structure
+                if (content.Contains("\"_embedded\""))
+                {
+                    var pagedResponse = JsonSerializer.Deserialize(content, _jsonContext.PagedResponseWebinar);
+                    if (pagedResponse?.Embedded?.Webinars != null)
+                    {
+                        allWebinars.AddRange(pagedResponse.Embedded.Webinars);
+                    }
+
+                    // Check if there are more pages
+                    if (pagedResponse?.Page != null)
+                    {
+                        hasMorePages = (pageNumber + 1) < pagedResponse.Page.TotalPages;
+                        pageNumber++;
+                    }
+                    else
+                    {
+                        hasMorePages = false;
+                    }
+                }
+                else
+                {
+                    // Empty response or no more pages
+                    hasMorePages = false;
+                }
             }
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            // Cache the combined results
+            var cacheData = JsonSerializer.Serialize(allWebinars, _jsonContext.ListWebinar);
+            _cache[cacheKey] = (DateTime.UtcNow.Add(_cacheExpiry), cacheData);
 
-            // Check if response contains _embedded structure
-            List<Webinar>? webinars;
-            if (content.Contains("\"_embedded\""))
-            {
-                var pagedResponse = JsonSerializer.Deserialize(content, _jsonContext.PagedResponseWebinar);
-                webinars = pagedResponse?.Embedded?.Webinars;
-            }
-            else
-            {
-                // Empty response just has page info
-                webinars = new List<Webinar>();
-            }
-
-            _cache[cacheKey] = (DateTime.UtcNow.Add(_cacheExpiry), content);
-
-            return webinars;
+            return allWebinars;
         }
         catch (Exception ex)
         {
