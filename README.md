@@ -45,7 +45,7 @@ To use this CLI, you'll need to obtain API credentials from GoToWebinar:
      - **Product**: Select "GoToWebinar"
      - **Application Name**: Enter a name for your application
      - **Application Description**: Provide a brief description
-     - **Redirect URIs**: Add `http://localhost:8080/callback` (required for CLI authentication)
+     - **Redirect URIs**: Add `http://localhost:7878/callback` (required for CLI authentication)
    
 3. **Obtain Your Credentials**:
    - Once created, you'll receive:
