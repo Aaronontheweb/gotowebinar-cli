@@ -14,6 +14,8 @@ public interface IGoToWebinarApiClient : IDisposable
 
     Task<Webinar?> CreateWebinarAsync(CreateWebinarRequest request, CancellationToken cancellationToken = default);
 
+    Task<Webinar?> UpdateWebinarAsync(string webinarKey, UpdateWebinarRequest request, CancellationToken cancellationToken = default);
+
     Task<bool> DeleteWebinarAsync(string webinarKey, CancellationToken cancellationToken = default);
 
     Task<List<Registrant>?> GetRegistrantsAsync(

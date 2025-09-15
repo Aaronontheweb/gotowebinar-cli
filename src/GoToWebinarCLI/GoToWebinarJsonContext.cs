@@ -21,6 +21,7 @@ namespace GoToWebinarCLI;
 [JsonSerializable(typeof(List<Webinar>))]
 [JsonSerializable(typeof(WebinarTime))]
 [JsonSerializable(typeof(CreateWebinarRequest))]
+[JsonSerializable(typeof(UpdateWebinarRequest))]
 [JsonSerializable(typeof(Registrant))]
 [JsonSerializable(typeof(Registrant[]))]
 [JsonSerializable(typeof(List<Registrant>))]

@@ -239,6 +239,42 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
         }
     }
 
+    public async Task<Webinar?> UpdateWebinarAsync(string webinarKey, UpdateWebinarRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureAuthenticatedAsync(cancellationToken))
+            return null;
+
+        var config = await _configService.GetConfigAsync();
+        var profile = config.GetCurrentProfile();
+
+        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}";
+
+        try
+        {
+            var json = JsonSerializer.Serialize(request, _jsonContext.UpdateWebinarRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PutAsync(url, content, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await HandleErrorResponseAsync(response);
+                return null;
+            }
+
+            // Clear cache since we've updated a webinar
+            ClearCache();
+
+            // Fetch and return the updated webinar
+            return await GetWebinarAsync(webinarKey, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Failed to update webinar - {ex.Message}");
+            return null;
+        }
+    }
+
     public async Task<bool> DeleteWebinarAsync(string webinarKey, CancellationToken cancellationToken = default)
     {
         if (!await EnsureAuthenticatedAsync(cancellationToken))
