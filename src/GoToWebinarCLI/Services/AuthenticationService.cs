@@ -143,16 +143,13 @@ public class AuthenticationService
 
     private string BuildAuthorizationUrl(string clientId, string state)
     {
-        var parameters = new Dictionary<string, string>
-        {
-            ["response_type"] = "code",
-            ["client_id"] = clientId,
-            ["redirect_uri"] = RedirectUri,
-            ["state"] = state
-        };
-
-        var queryString = string.Join("&",
-            parameters.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+        // Build the query string with proper encoding
+        // Note: redirect_uri should NOT be URL-encoded as per OAuth 2.0 spec
+        // The redirect_uri must match exactly what was registered with the OAuth provider
+        var queryString = $"response_type=code" +
+            $"&client_id={Uri.EscapeDataString(clientId)}" +
+            $"&redirect_uri={RedirectUri}" +
+            $"&state={Uri.EscapeDataString(state)}";
 
         var fullUrl = $"{AuthorizationEndpoint}?{queryString}";
         return fullUrl;
