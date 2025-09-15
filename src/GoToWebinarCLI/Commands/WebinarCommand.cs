@@ -12,6 +12,8 @@ public sealed class WebinarCommand : Command
         AddCommand(CreateListCommand());
         AddCommand(CreateGetCommand());
         AddCommand(CreateCreateCommand());
+        AddCommand(CreateUpdateCommand());
+        AddCommand(CreateCopyCommand());
         AddCommand(CreateDeleteCommand());
     }
 
@@ -264,6 +266,239 @@ public sealed class WebinarCommand : Command
             Console.WriteLine($"  Subject: {webinar.Subject}");
             Console.WriteLine($"  Registration URL: {webinar.RegistrationUrl}");
         }, subjectOption, descriptionOption, startTimeOption, durationOption, timeZoneOption);
+
+        return command;
+    }
+
+    private static Command CreateUpdateCommand()
+    {
+        var command = new Command("update", "Update an existing webinar");
+
+        var keyArgument = new Argument<string>("webinar-key", "The webinar key to update");
+
+        var subjectOption = new Option<string?>(
+            new[] { "--subject", "--title", "-s" },
+            "Update webinar subject/title");
+
+        var descriptionOption = new Option<string?>(
+            new[] { "--description", "-d" },
+            "Update webinar description");
+
+        var startTimeOption = new Option<DateTime?>(
+            new[] { "--start", "--start-time" },
+            "Update start time (YYYY-MM-DD HH:MM)");
+
+        var durationOption = new Option<int?>(
+            new[] { "--duration" },
+            "Update duration in minutes");
+
+        var timeZoneOption = new Option<string?>(
+            new[] { "--timezone", "-tz" },
+            "Update time zone");
+
+        command.AddArgument(keyArgument);
+        command.AddOption(subjectOption);
+        command.AddOption(descriptionOption);
+        command.AddOption(startTimeOption);
+        command.AddOption(durationOption);
+        command.AddOption(timeZoneOption);
+
+        command.SetHandler(async (key, subject, description, startTime, duration, timeZone) =>
+        {
+            var configService = new ConfigurationService();
+            using var apiClient = new GoToWebinarApiClient(configService);
+
+            // First get the existing webinar
+            var existingWebinar = await apiClient.GetWebinarAsync(key);
+            if (existingWebinar == null)
+            {
+                Console.WriteLine($"❌ Webinar {key} not found.");
+                Environment.Exit(1);
+                return;
+            }
+
+            // Build update request with only changed fields
+            var request = new UpdateWebinarRequest();
+            bool hasChanges = false;
+
+            if (!string.IsNullOrEmpty(subject))
+            {
+                request.Subject = subject;
+                hasChanges = true;
+            }
+
+            if (description != null)
+            {
+                request.Description = description;
+                hasChanges = true;
+            }
+
+            if (startTime.HasValue || duration.HasValue)
+            {
+                var existingTime = existingWebinar.Times?.FirstOrDefault();
+                if (existingTime != null)
+                {
+                    var newStartTime = startTime ?? existingTime.StartTime;
+                    var existingDuration = (existingTime.EndTime - existingTime.StartTime).TotalMinutes;
+                    var newDuration = duration ?? (int)existingDuration;
+
+                    request.Times = new List<WebinarTime>
+                    {
+                        new()
+                        {
+                            StartTime = newStartTime,
+                            EndTime = newStartTime.AddMinutes(newDuration)
+                        }
+                    };
+                    hasChanges = true;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(timeZone))
+            {
+                request.TimeZone = timeZone;
+                hasChanges = true;
+            }
+
+            if (!hasChanges)
+            {
+                Console.WriteLine("❌ No changes specified. Use options like --subject, --description, --start, etc.");
+                Environment.Exit(1);
+                return;
+            }
+
+            var updatedWebinar = await apiClient.UpdateWebinarAsync(key, request);
+
+            if (updatedWebinar == null)
+            {
+                Console.WriteLine("❌ Failed to update webinar.");
+                Environment.Exit(1);
+                return;
+            }
+
+            Console.WriteLine($"✓ Webinar updated successfully!");
+            Console.WriteLine($"  Key: {updatedWebinar.WebinarKey}");
+            Console.WriteLine($"  Subject: {updatedWebinar.Subject}");
+            if (updatedWebinar.Times?.Any() == true)
+            {
+                var time = updatedWebinar.Times.First();
+                Console.WriteLine($"  Start Time: {time.StartTime:yyyy-MM-dd HH:mm}");
+                Console.WriteLine($"  Duration: {(time.EndTime - time.StartTime).TotalMinutes} minutes");
+            }
+        }, keyArgument, subjectOption, descriptionOption, startTimeOption, durationOption, timeZoneOption);
+
+        return command;
+    }
+
+    private static Command CreateCopyCommand()
+    {
+        var command = new Command("copy", "Copy an existing webinar to a new date/time");
+
+        var keyArgument = new Argument<string>("webinar-key", "The webinar key to copy");
+
+        var startTimeOption = new Option<DateTime>(
+            new[] { "--start", "--start-time" },
+            "Start time for the new webinar (YYYY-MM-DD HH:MM)")
+        { IsRequired = true };
+
+        var subjectOption = new Option<string?>(
+            new[] { "--subject", "--title", "-s" },
+            "Override subject/title for the new webinar");
+
+        var descriptionOption = new Option<string?>(
+            new[] { "--description", "-d" },
+            "Override description for the new webinar");
+
+        var durationOption = new Option<int?>(
+            new[] { "--duration" },
+            "Override duration in minutes (default: copy from source)");
+
+        var timeZoneOption = new Option<string?>(
+            new[] { "--timezone", "-tz" },
+            "Override time zone (default: copy from source)");
+
+        var outputOption = new Option<string>(
+            new[] { "--output", "-o" },
+            () => "detail",
+            "Output format (detail, key-only, json)");
+
+        command.AddArgument(keyArgument);
+        command.AddOption(startTimeOption);
+        command.AddOption(subjectOption);
+        command.AddOption(descriptionOption);
+        command.AddOption(durationOption);
+        command.AddOption(timeZoneOption);
+        command.AddOption(outputOption);
+
+        command.SetHandler(async (key, startTime, subject, description, duration, timeZone, output) =>
+        {
+            var configService = new ConfigurationService();
+            using var apiClient = new GoToWebinarApiClient(configService);
+
+            // Get the source webinar
+            var sourceWebinar = await apiClient.GetWebinarAsync(key);
+            if (sourceWebinar == null)
+            {
+                Console.WriteLine($"❌ Source webinar {key} not found.");
+                Environment.Exit(1);
+                return;
+            }
+
+            // Calculate duration
+            var sourceDuration = 60; // default
+            if (sourceWebinar.Times?.Any() == true)
+            {
+                var sourceTime = sourceWebinar.Times.First();
+                sourceDuration = (int)(sourceTime.EndTime - sourceTime.StartTime).TotalMinutes;
+            }
+
+            // Create new webinar request based on source
+            var request = new CreateWebinarRequest
+            {
+                Subject = subject ?? sourceWebinar.Subject,
+                Description = description ?? sourceWebinar.Description,
+                TimeZone = timeZone ?? sourceWebinar.TimeZone,
+                Times = new List<WebinarTime>
+                {
+                    new()
+                    {
+                        StartTime = startTime,
+                        EndTime = startTime.AddMinutes(duration ?? sourceDuration)
+                    }
+                }
+            };
+
+            var newWebinar = await apiClient.CreateWebinarAsync(request);
+
+            if (newWebinar == null)
+            {
+                Console.WriteLine("❌ Failed to create webinar copy.");
+                Environment.Exit(1);
+                return;
+            }
+
+            switch (output.ToLowerInvariant())
+            {
+                case "key-only":
+                    Console.WriteLine(newWebinar.WebinarKey);
+                    break;
+
+                case "json":
+                    var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions { WriteIndented = true });
+                    Console.WriteLine(JsonSerializer.Serialize(newWebinar, jsonContext.Webinar));
+                    break;
+
+                default: // detail
+                    Console.WriteLine($"✓ Webinar copied successfully!");
+                    Console.WriteLine($"  Source Key: {key}");
+                    Console.WriteLine($"  New Key: {newWebinar.WebinarKey}");
+                    Console.WriteLine($"  Subject: {newWebinar.Subject}");
+                    Console.WriteLine($"  Start Time: {startTime:yyyy-MM-dd HH:mm}");
+                    Console.WriteLine($"  Duration: {duration ?? sourceDuration} minutes");
+                    Console.WriteLine($"  Registration URL: {newWebinar.RegistrationUrl}");
+                    break;
+            }
+        }, keyArgument, startTimeOption, subjectOption, descriptionOption, durationOption, timeZoneOption, outputOption);
 
         return command;
     }

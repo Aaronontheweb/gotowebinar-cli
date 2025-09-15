@@ -82,3 +82,33 @@ public sealed class CreateWebinarRequest
     [JsonPropertyName("experienceType")]
     public string ExperienceType { get; set; } = "CLASSIC";
 }
+
+public sealed class UpdateWebinarRequest
+{
+    [JsonPropertyName("subject")]
+    public string? Subject { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("times")]
+    public List<WebinarTime>? Times { get; set; }
+
+    [JsonPropertyName("timeZone")]
+    public string? TimeZone { get; set; }
+
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("isPasswordProtected")]
+    public bool? IsPasswordProtected { get; set; }
+
+    [JsonPropertyName("recordingAssetKey")]
+    public string? RecordingAssetKey { get; set; }
+
+    [JsonPropertyName("isOndemand")]
+    public bool? IsOndemand { get; set; }
+
+    [JsonPropertyName("experienceType")]
+    public string? ExperienceType { get; set; }
+}
