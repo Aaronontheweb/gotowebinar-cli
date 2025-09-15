@@ -1,3 +1,43 @@
+#### 1.0.0 September 15th 2025 ####
+
+First stable release of GoToWebinar CLI
+
+**Major New Features:**
+- **Webinar copy and update commands** - Complete webinar management capabilities ([#37](https://github.com/Aaronontheweb/gotowebinar-cli/pull/37))
+  - `webinar copy` - Clone existing webinars to new dates with optional field overrides
+  - `webinar update` - Modify existing webinar properties (title, description, timing, etc.)
+  - Support for multiple output formats (detail, key-only, json) for scripting workflows
+  - Enables easy management of recurring webinars and training sessions
+
+**Critical Bug Fixes:**
+- **Fixed OAuth authentication flow** - Resolved multiple authentication issues for reliable setup ([#25](https://github.com/Aaronontheweb/gotowebinar-cli/pull/25), [#24](https://github.com/Aaronontheweb/gotowebinar-cli/pull/24), [#36](https://github.com/Aaronontheweb/gotowebinar-cli/pull/36))
+  - Fixed OAuth redirect URI encoding that was preventing successful authentication
+  - Implemented HTTP Basic Auth for token exchange to resolve invalid_client errors
+  - Corrected redirect port documentation (7878, not 8080)
+  - Enhanced auth command help text with clear setup instructions
+
+**Performance & Usability Improvements:**
+- **Enhanced webinar list functionality** - Better data retrieval and organization ([#36](https://github.com/Aaronontheweb/gotowebinar-cli/pull/36))
+  - Implemented pagination to fetch all webinars (not just first page)
+  - Added intelligent sorting: recent-first for past webinars, soonest-first for upcoming
+  - Fixed date range handling to retrieve webinars from all time periods
+  - Improved help documentation for configuration and authentication commands
+
+**Impact for Users:**
+- Complete webinar management workflow from creation to updates and duplication
+- Reliable OAuth authentication setup with clear error messages and guidance
+- Comprehensive webinar listing that shows all available webinars with proper sorting
+- Professional tooling ready for production use with recurring webinar management
+
+**Stability & Testing:**
+- Comprehensive unit test coverage for all new functionality
+- Validated API client integration with proper error handling
+- Native AOT compilation compatibility maintained for optimal performance
+
+This release represents the graduation from beta to stable status, providing a complete, reliable solution for GoToWebinar management via command line.
+
+---
+
 #### 1.0.0-beta5 September 2nd 2025 ####
 
 Configuration command validation improvements
