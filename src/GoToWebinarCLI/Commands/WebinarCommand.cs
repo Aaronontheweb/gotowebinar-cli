@@ -82,6 +82,19 @@ public sealed class WebinarCommand : Command
                 return;
             }
 
+            // Sort webinars by start time
+            // For past webinars, show most recent first (descending)
+            // For upcoming webinars, show soonest first (ascending)
+            // For all webinars, show most recent first
+            if (past || all)
+            {
+                webinars = webinars.OrderByDescending(w => w.Times?.FirstOrDefault()?.StartTime ?? DateTime.MinValue).ToList();
+            }
+            else
+            {
+                webinars = webinars.OrderBy(w => w.Times?.FirstOrDefault()?.StartTime ?? DateTime.MinValue).ToList();
+            }
+
             switch (format.ToLowerInvariant())
             {
                 case "json":
