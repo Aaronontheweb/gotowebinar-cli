@@ -103,3 +103,15 @@ public sealed class WebinarSettings
     [JsonPropertyName("brandingTheme")]
     public BrandingTheme? BrandingTheme { get; set; }
 }
+
+public sealed class RegistrationSettings
+{
+    [JsonPropertyName("approvalRequired")]
+    public bool ApprovalRequired { get; set; }
+
+    [JsonPropertyName("registrationLimit")]
+    public int? RegistrationLimit { get; set; }
+
+    [JsonPropertyName("allowRegistrationAfterStart")]
+    public bool AllowRegistrationAfterStart { get; set; } = true;
+}

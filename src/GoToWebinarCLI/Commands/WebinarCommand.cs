@@ -15,7 +15,9 @@ public sealed class WebinarCommand : Command
         AddCommand(CreateUpdateCommand());
         AddCommand(CreateCopyCommand());
         AddCommand(CreateDeleteCommand());
-        AddCommand(new RegistrationFieldsCommand());
+        // Disabled: Registration fields API doesn't exist in GoToWebinar v2
+        // See: https://github.com/Aaronontheweb/gotowebinar-cli/issues/45
+        // AddCommand(new RegistrationFieldsCommand());
     }
 
     private static Command CreateListCommand()
@@ -487,27 +489,33 @@ public sealed class WebinarCommand : Command
             // Copy additional settings if requested
             if (copySettings)
             {
-                // Copy registration fields
-                var sourceFields = await apiClient.GetRegistrationFieldsAsync(key);
-                if (sourceFields != null)
-                {
-                    var fieldsSuccess = await apiClient.UpdateRegistrationFieldsAsync(newWebinar.WebinarKey, sourceFields);
-                    if (!fieldsSuccess)
-                    {
-                        Console.WriteLine("⚠️  Warning: Failed to copy registration fields");
-                    }
-                }
+                // Registration fields API doesn't exist in GoToWebinar v2
+                // See: https://github.com/Aaronontheweb/gotowebinar-cli/issues/45
+                // Users must manually configure registration fields through the web UI
+                Console.WriteLine("⚠️  Note: Registration fields cannot be copied via API.");
+                Console.WriteLine("    You must manually configure them at https://global.gotowebinar.com");
 
-                // Copy email settings (if available)
-                var sourceEmails = await apiClient.GetEmailSettingsAsync(key);
-                if (sourceEmails != null)
-                {
-                    var emailsSuccess = await apiClient.UpdateEmailSettingsAsync(newWebinar.WebinarKey, sourceEmails);
-                    if (!emailsSuccess)
-                    {
-                        Console.WriteLine("⚠️  Warning: Failed to copy email settings");
-                    }
-                }
+                // The following code is disabled as the API endpoints don't exist:
+                // var sourceFields = await apiClient.GetRegistrationFieldsAsync(key);
+                // if (sourceFields != null)
+                // {
+                //     var fieldsSuccess = await apiClient.UpdateRegistrationFieldsAsync(newWebinar.WebinarKey, sourceFields);
+                //     if (!fieldsSuccess)
+                //     {
+                //         Console.WriteLine("⚠️  Warning: Failed to copy registration fields");
+                //     }
+                // }
+
+                // Email settings API also doesn't exist - disabled
+                // var sourceEmails = await apiClient.GetEmailSettingsAsync(key);
+                // if (sourceEmails != null)
+                // {
+                //     var emailsSuccess = await apiClient.UpdateEmailSettingsAsync(newWebinar.WebinarKey, sourceEmails);
+                //     if (!emailsSuccess)
+                //     {
+                //         Console.WriteLine("⚠️  Warning: Failed to copy email settings");
+                //     }
+                // }
             }
 
             switch (output.ToLowerInvariant())

@@ -14,14 +14,18 @@ public sealed class ConfigurationService : IConfigurationService
     private ConfigFile? _config;
     private static readonly byte[] _entropy = Encoding.UTF8.GetBytes("GoToWebinar-CLI-2024");
 
-    public ConfigurationService()
+    public ConfigurationService() : this(null)
+    {
+    }
+
+    public ConfigurationService(string? configDirectory)
     {
         _jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions
         {
             WriteIndented = true
         });
 
-        var configDir = Path.Combine(
+        var configDir = configDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".gotowebinar");
 

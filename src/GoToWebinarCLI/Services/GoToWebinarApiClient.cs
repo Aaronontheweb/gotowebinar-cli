@@ -455,10 +455,22 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
         }
     }
 
+    /// <summary>
+    /// DEPRECATED: This API endpoint doesn't exist in GoToWebinar v2.
+    /// Registration fields must be configured through the web UI.
+    /// See: https://github.com/Aaronontheweb/gotowebinar-cli/issues/45
+    /// </summary>
+    [Obsolete("This API endpoint doesn't exist in GoToWebinar v2. Use the web UI to configure registration fields.")]
     public async Task<RegistrationFields?> GetRegistrationFieldsAsync(
         string webinarKey,
         CancellationToken cancellationToken = default)
     {
+        // This endpoint doesn't exist - always return null
+        await Task.CompletedTask; // Suppress async warning
+        return null;
+
+        // Original implementation kept for reference:
+        /*
         if (!await EnsureAuthenticatedAsync(cancellationToken))
             return null;
 
@@ -487,13 +499,26 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
             Console.WriteLine($"Error: Failed to get registration fields - {ex.Message}");
             return null;
         }
+        */
     }
 
+    /// <summary>
+    /// DEPRECATED: This API endpoint doesn't exist in GoToWebinar v2.
+    /// Registration fields must be configured through the web UI.
+    /// See: https://github.com/Aaronontheweb/gotowebinar-cli/issues/45
+    /// </summary>
+    [Obsolete("This API endpoint doesn't exist in GoToWebinar v2. Use the web UI to configure registration fields.")]
     public async Task<bool> UpdateRegistrationFieldsAsync(
         string webinarKey,
         RegistrationFields fields,
         CancellationToken cancellationToken = default)
     {
+        // This endpoint doesn't exist - always return false
+        await Task.CompletedTask; // Suppress async warning
+        return false;
+
+        // Original implementation kept for reference:
+        /*
         if (!await EnsureAuthenticatedAsync(cancellationToken))
             return false;
 
@@ -522,12 +547,25 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
             Console.WriteLine($"Error: Failed to update registration fields - {ex.Message}");
             return false;
         }
+        */
     }
 
+    /// <summary>
+    /// DEPRECATED: This API endpoint doesn't exist in GoToWebinar v2.
+    /// Email settings must be configured through the web UI.
+    /// See: https://github.com/Aaronontheweb/gotowebinar-cli/issues/45
+    /// </summary>
+    [Obsolete("This API endpoint doesn't exist in GoToWebinar v2. Use the web UI to configure email settings.")]
     public async Task<EmailSettings?> GetEmailSettingsAsync(
         string webinarKey,
         CancellationToken cancellationToken = default)
     {
+        // This endpoint doesn't exist - always return null
+        await Task.CompletedTask; // Suppress async warning
+        return null;
+
+        // Original implementation kept for reference:
+        /*
         if (!await EnsureAuthenticatedAsync(cancellationToken))
             return null;
 
@@ -566,13 +604,26 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
             Console.WriteLine($"Error: Failed to get email settings - {ex.Message}");
             return null;
         }
+        */
     }
 
+    /// <summary>
+    /// DEPRECATED: This API endpoint doesn't exist in GoToWebinar v2.
+    /// Email settings must be configured through the web UI.
+    /// See: https://github.com/Aaronontheweb/gotowebinar-cli/issues/45
+    /// </summary>
+    [Obsolete("This API endpoint doesn't exist in GoToWebinar v2. Use the web UI to configure email settings.")]
     public async Task<bool> UpdateEmailSettingsAsync(
         string webinarKey,
         EmailSettings settings,
         CancellationToken cancellationToken = default)
     {
+        // This endpoint doesn't exist - always return false
+        await Task.CompletedTask; // Suppress async warning
+        return false;
+
+        // Original implementation kept for reference:
+        /*
         if (!await EnsureAuthenticatedAsync(cancellationToken))
             return false;
 
@@ -608,6 +659,7 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
             Console.WriteLine($"Error: Failed to update email settings - {ex.Message}");
             return false;
         }
+        */
     }
 
     public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
