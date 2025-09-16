@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -15,12 +16,13 @@ using Xunit;
 
 namespace GoToWebinarCLI.Tests.Services;
 
-public class GoToWebinarApiClientTests
+public class GoToWebinarApiClientTests : IDisposable
 {
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
     private readonly HttpClient _httpClient;
     private readonly ConfigurationService _configService;
     private readonly GoToWebinarApiClient _apiClient;
+    private readonly string _testConfigDirectory;
 
     public GoToWebinarApiClientTests()
     {
@@ -30,7 +32,10 @@ public class GoToWebinarApiClientTests
             BaseAddress = new Uri("https://api.getgo.com/G2W/rest/v2/")
         };
 
-        _configService = new ConfigurationService();
+        // Use a temporary directory for test configuration
+        _testConfigDirectory = Path.Combine(Path.GetTempPath(), $"gotowebinar-test-{Guid.NewGuid()}");
+        Directory.CreateDirectory(_testConfigDirectory);
+        _configService = new ConfigurationService(_testConfigDirectory);
 
         // Setup a test configuration
         var config = new ConfigFile
@@ -53,6 +58,22 @@ public class GoToWebinarApiClientTests
         // Create API client with mocked HttpClient
         _apiClient = new GoToWebinarApiClient(_configService);
         // We'd need to inject the HttpClient in the real implementation
+    }
+
+    public void Dispose()
+    {
+        // Clean up the temporary directory
+        if (Directory.Exists(_testConfigDirectory))
+        {
+            try
+            {
+                Directory.Delete(_testConfigDirectory, true);
+            }
+            catch
+            {
+                // Ignore cleanup failures
+            }
+        }
     }
 
     [Fact]
