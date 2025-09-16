@@ -14,20 +14,34 @@ A command-line interface for interacting with the GoToWebinar API, providing eas
 
 ## Installation
 
-### Prerequisites
-- .NET 9.0 SDK or later (check `global.json` for exact version)
+### Quick Install (Recommended)
 
-### Build from Source
+#### Linux/macOS
 ```bash
-git clone https://github.com/stannardlabs/gotowebinar-cli.git
-cd gotowebinar-cli
-dotnet build
+curl -sSL https://raw.githubusercontent.com/Aaronontheweb/gotowebinar-cli/main/scripts/install.sh | bash
 ```
 
-### Install as Global Tool
+#### Windows (PowerShell)
+```powershell
+iwr -useb https://raw.githubusercontent.com/Aaronontheweb/gotowebinar-cli/main/scripts/install.ps1 | iex
+```
+
+### Manual Download
+Download the latest release for your platform from the [releases page](https://github.com/Aaronontheweb/gotowebinar-cli/releases/latest).
+
+### Build from Source
+
+#### Prerequisites
+- .NET 9.0 SDK or later (check `global.json` for exact version)
+
 ```bash
-dotnet pack
-dotnet tool install --global --add-source ./nupkg GoToWebinarCLI
+git clone https://github.com/Aaronontheweb/gotowebinar-cli.git
+cd gotowebinar-cli
+dotnet publish -c Release
+
+# The executable will be in:
+# Linux/macOS: src/GoToWebinarCLI/bin/Release/net9.0/linux-x64/publish/gotowebinar
+# Windows: src/GoToWebinarCLI/bin/Release/net9.0/win-x64/publish/gotowebinar.exe
 ```
 
 ## Getting GoToWebinar API Credentials
@@ -63,13 +77,13 @@ To use this CLI, you'll need to obtain API credentials from GoToWebinar:
 ### Initial Configuration
 Configure your API credentials obtained from the steps above:
 ```bash
-gotowebinar config --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
+gotowebinar config set --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
 ```
 
 ### Authentication
 Authenticate with GoToWebinar:
 ```bash
-gotowebinar auth login
+gotowebinar config auth
 ```
 
 ### Common Commands
@@ -106,6 +120,18 @@ For detailed examples and complete workflows, see the [Examples Documentation](d
 - Batch operations and automation scripts
 - Post-webinar analysis procedures
 - Troubleshooting guides
+
+### Managing Multiple Profiles
+```bash
+# Create a new profile
+gotowebinar config set --client-id CLIENT_ID --client-secret SECRET --profile work
+
+# Switch between profiles
+gotowebinar config profiles switch work
+
+# List all profiles
+gotowebinar config profiles list
+```
 
 ### Getting Help
 ```bash
@@ -154,15 +180,12 @@ The CLI includes built-in rate limiting to comply with GoToWebinar API limits. T
 
 ## Auto-Update Feature
 
-The CLI can automatically check for updates. To enable:
-```bash
-gotowebinar config --enable-auto-update
-```
-
 To manually check for updates:
 ```bash
 gotowebinar update check
 ```
+
+Note: Auto-update configuration is managed through the config file directly.
 
 ## Contributing
 
