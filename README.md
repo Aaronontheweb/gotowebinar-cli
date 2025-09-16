@@ -21,10 +21,19 @@ A command-line interface for interacting with the GoToWebinar API, providing eas
 curl -sSL https://raw.githubusercontent.com/Aaronontheweb/gotowebinar-cli/main/scripts/install.sh | bash
 ```
 
+The installer will:
+- Install to `~/.local/bin` (no sudo required)
+- Add the directory to your PATH if needed
+- Guide you through PATH setup if manual configuration is required
+
 #### Windows (PowerShell)
 ```powershell
 iwr -useb https://raw.githubusercontent.com/Aaronontheweb/gotowebinar-cli/main/scripts/install.ps1 | iex
 ```
+
+The installer will:
+- Install to `%LOCALAPPDATA%\Programs\GoToWebinarCLI` (no admin required)
+- Add the directory to your user PATH automatically
 
 ### Manual Download
 Download the latest release for your platform from the [releases page](https://github.com/Aaronontheweb/gotowebinar-cli/releases/latest).

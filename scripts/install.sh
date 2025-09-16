@@ -6,7 +6,7 @@ set -e
 # This script downloads and installs the GoToWebinar CLI tool
 
 REPO="Aaronontheweb/gotowebinar-cli"
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="${INSTALL_DIR:-${HOME}/.local/bin}"
 BINARY_NAME="gotowebinar"
 
 # Colors for output
@@ -113,28 +113,35 @@ install_binary() {
     local source_path=$1
     local install_dir=$2
     local binary_name=$3
-    
-    # Check if we need sudo
-    if [ -w "$install_dir" ]; then
-        SUDO=""
-    else
-        SUDO="sudo"
-        warn "Installation requires sudo privileges"
-    fi
-    
+
     info "Installing to ${install_dir}/${binary_name}..."
-    
-    $SUDO mkdir -p "$install_dir"
-    $SUDO cp "$source_path" "${install_dir}/${binary_name}"
-    $SUDO chmod +x "${install_dir}/${binary_name}"
-    
-    # Verify installation
-    if command -v "$binary_name" &> /dev/null; then
+
+    # Create install directory if it doesn't exist (no sudo needed for user directory)
+    mkdir -p "$install_dir"
+    cp "$source_path" "${install_dir}/${binary_name}"
+    chmod +x "${install_dir}/${binary_name}"
+
+    # Check if install dir is in PATH
+    if [[ ":$PATH:" != *":${install_dir}:"* ]]; then
+        warn "${install_dir} is not in your PATH"
+        echo ""
+        echo "Add it to your PATH by adding this line to your shell profile:"
+        echo ""
+
+        if [ -n "$ZSH_VERSION" ]; then
+            echo "  echo 'export PATH=\"\$PATH:${install_dir}\"' >> ~/.zshrc"
+            echo "  source ~/.zshrc"
+        elif [ -n "$BASH_VERSION" ]; then
+            echo "  echo 'export PATH=\"\$PATH:${install_dir}\"' >> ~/.bashrc"
+            echo "  source ~/.bashrc"
+        else
+            echo "  export PATH=\"\$PATH:${install_dir}\""
+        fi
+        echo ""
+        info "Or run directly: ${install_dir}/${binary_name}"
+    else
         info "Installation successful!"
         info "Run '${binary_name} --help' to get started"
-    else
-        warn "Binary installed but not in PATH. Add ${install_dir} to your PATH"
-        warn "You can run it directly: ${install_dir}/${binary_name}"
     fi
 }
 
@@ -170,7 +177,7 @@ main() {
             --help)
                 echo "Usage: $0 [options]"
                 echo "Options:"
-                echo "  --install-dir DIR    Installation directory (default: /usr/local/bin)"
+                echo "  --install-dir DIR    Installation directory (default: ~/.local/bin)"
                 echo "  --binary-name NAME   Binary name (default: gotowebinar)"
                 echo "  --version VERSION    Specific version to install (default: latest)"
                 echo "  --help              Show this help message"
