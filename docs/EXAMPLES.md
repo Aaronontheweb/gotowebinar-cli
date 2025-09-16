@@ -16,19 +16,19 @@ This guide provides practical examples of using the GoToWebinar CLI for common w
 ### Initial Configuration
 Set up your API credentials (obtained from the GoTo Developer Center):
 ```bash
-gotowebinar config --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
+gotowebinar config set --client-id YOUR_CLIENT_ID --client-secret YOUR_CLIENT_SECRET
 ```
 
 ### Login
 Authenticate with GoToWebinar (opens browser for OAuth flow):
 ```bash
-gotowebinar auth login
+gotowebinar config auth
 ```
 
 ### Check Authentication Status
-Verify your authentication status:
+Verify your configuration and authentication status:
 ```bash
-gotowebinar auth status
+gotowebinar config test
 ```
 
 ## Listing and Viewing Webinars
@@ -321,14 +321,10 @@ Always use ISO 8601 format for dates and times:
 If you encounter authentication errors:
 ```bash
 # Check token status
-gotowebinar auth status
+gotowebinar config test
 
-# Refresh token if needed
-gotowebinar auth refresh
-
-# Or re-login
-gotowebinar auth logout
-gotowebinar auth login
+# Re-authenticate if needed
+gotowebinar config auth
 ```
 
 ### Rate Limiting
