@@ -79,6 +79,16 @@ List webinars:
 gotowebinar webinar list
 ```
 
+Copy a webinar:
+```bash
+gotowebinar webinar copy --webinar-id WEBINAR_ID --title "New Webinar Title"
+```
+
+Update a webinar:
+```bash
+gotowebinar webinar update --webinar-id WEBINAR_ID --title "Updated Title"
+```
+
 Export registrants:
 ```bash
 gotowebinar registrant export --webinar-id WEBINAR_ID --output registrants.csv
@@ -88,6 +98,14 @@ Check for updates:
 ```bash
 gotowebinar update check
 ```
+
+### Examples and Workflows
+
+For detailed examples and complete workflows, see the [Examples Documentation](docs/EXAMPLES.md), which includes:
+- Step-by-step webinar copying workflows
+- Batch operations and automation scripts
+- Post-webinar analysis procedures
+- Troubleshooting guides
 
 ### Getting Help
 ```bash
