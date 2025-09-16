@@ -18,7 +18,7 @@ A command-line interface for interacting with the GoToWebinar API, providing eas
 
 #### Linux/macOS
 ```bash
-curl -sSL https://raw.githubusercontent.com/Aaronontheweb/gotowebinar-cli/main/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/Aaronontheweb/gotowebinar-cli/dev/scripts/install.sh | bash
 ```
 
 The installer will:
@@ -28,7 +28,7 @@ The installer will:
 
 #### Windows (PowerShell)
 ```powershell
-iwr -useb https://raw.githubusercontent.com/Aaronontheweb/gotowebinar-cli/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/Aaronontheweb/gotowebinar-cli/dev/scripts/install.ps1 | iex
 ```
 
 The installer will:
