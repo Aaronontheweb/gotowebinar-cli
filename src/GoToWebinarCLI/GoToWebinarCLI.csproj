@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <!-- Core Dependencies for CLI -->
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" />
     <PackageReference Include="System.CommandLine" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" />
     <PackageReference Include="System.Text.Json" />
