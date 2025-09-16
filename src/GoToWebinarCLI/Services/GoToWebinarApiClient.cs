@@ -455,6 +455,161 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
         }
     }
 
+    public async Task<RegistrationFields?> GetRegistrationFieldsAsync(
+        string webinarKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureAuthenticatedAsync(cancellationToken))
+            return null;
+
+        var config = await _configService.GetConfigAsync();
+        var profile = config.GetCurrentProfile();
+
+        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}/registrationFields";
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await HandleErrorResponseAsync(response);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var fields = JsonSerializer.Deserialize(content, _jsonContext.RegistrationFields);
+
+            return fields;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Failed to get registration fields - {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> UpdateRegistrationFieldsAsync(
+        string webinarKey,
+        RegistrationFields fields,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureAuthenticatedAsync(cancellationToken))
+            return false;
+
+        var config = await _configService.GetConfigAsync();
+        var profile = config.GetCurrentProfile();
+
+        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}/registrationFields";
+
+        try
+        {
+            var json = JsonSerializer.Serialize(fields, _jsonContext.RegistrationFields);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PutAsync(url, content, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await HandleErrorResponseAsync(response);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Failed to update registration fields - {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<EmailSettings?> GetEmailSettingsAsync(
+        string webinarKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureAuthenticatedAsync(cancellationToken))
+            return null;
+
+        var config = await _configService.GetConfigAsync();
+        var profile = config.GetCurrentProfile();
+
+        // Note: This endpoint might not exist in GoToWebinar API v2
+        // We may need to get this from the webinar details instead
+        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}/emailSettings";
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Email settings might be part of webinar details
+                // For now, return null if endpoint doesn't exist
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    Console.WriteLine("Note: Email settings endpoint not available in current API version");
+                    return null;
+                }
+
+                await HandleErrorResponseAsync(response);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var settings = JsonSerializer.Deserialize(content, _jsonContext.EmailSettings);
+
+            return settings;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Failed to get email settings - {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> UpdateEmailSettingsAsync(
+        string webinarKey,
+        EmailSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureAuthenticatedAsync(cancellationToken))
+            return false;
+
+        var config = await _configService.GetConfigAsync();
+        var profile = config.GetCurrentProfile();
+
+        // Note: This endpoint might not exist in GoToWebinar API v2
+        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}/emailSettings";
+
+        try
+        {
+            var json = JsonSerializer.Serialize(settings, _jsonContext.EmailSettings);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PutAsync(url, content, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    Console.WriteLine("Note: Email settings endpoint not available in current API version");
+                    return false;
+                }
+
+                await HandleErrorResponseAsync(response);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Failed to update email settings - {ex.Message}");
+            return false;
+        }
+    }
+
     public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
         if (!await EnsureAuthenticatedAsync(cancellationToken))

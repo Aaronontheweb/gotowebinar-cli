@@ -37,6 +37,24 @@ public interface IGoToWebinarApiClient : IDisposable
         string registrantKey,
         CancellationToken cancellationToken = default);
 
+    Task<RegistrationFields?> GetRegistrationFieldsAsync(
+        string webinarKey,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> UpdateRegistrationFieldsAsync(
+        string webinarKey,
+        RegistrationFields fields,
+        CancellationToken cancellationToken = default);
+
+    Task<EmailSettings?> GetEmailSettingsAsync(
+        string webinarKey,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> UpdateEmailSettingsAsync(
+        string webinarKey,
+        EmailSettings settings,
+        CancellationToken cancellationToken = default);
+
     Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default);
 }
 

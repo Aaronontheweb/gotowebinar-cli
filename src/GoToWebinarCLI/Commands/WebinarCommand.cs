@@ -15,6 +15,7 @@ public sealed class WebinarCommand : Command
         AddCommand(CreateUpdateCommand());
         AddCommand(CreateCopyCommand());
         AddCommand(CreateDeleteCommand());
+        AddCommand(new RegistrationFieldsCommand());
     }
 
     private static Command CreateListCommand()
@@ -417,6 +418,11 @@ public sealed class WebinarCommand : Command
             new[] { "--timezone", "-tz" },
             "Override time zone (default: copy from source)");
 
+        var copySettingsOption = new Option<bool>(
+            new[] { "--copy-settings", "--full-copy" },
+            () => true,
+            "Copy registration fields and email settings (default: true)");
+
         var outputOption = new Option<string>(
             new[] { "--output", "-o" },
             () => "detail",
@@ -428,9 +434,10 @@ public sealed class WebinarCommand : Command
         command.AddOption(descriptionOption);
         command.AddOption(durationOption);
         command.AddOption(timeZoneOption);
+        command.AddOption(copySettingsOption);
         command.AddOption(outputOption);
 
-        command.SetHandler(async (key, startTime, subject, description, duration, timeZone, output) =>
+        command.SetHandler(async (key, startTime, subject, description, duration, timeZone, copySettings, output) =>
         {
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
@@ -477,6 +484,32 @@ public sealed class WebinarCommand : Command
                 return;
             }
 
+            // Copy additional settings if requested
+            if (copySettings)
+            {
+                // Copy registration fields
+                var sourceFields = await apiClient.GetRegistrationFieldsAsync(key);
+                if (sourceFields != null)
+                {
+                    var fieldsSuccess = await apiClient.UpdateRegistrationFieldsAsync(newWebinar.WebinarKey, sourceFields);
+                    if (!fieldsSuccess)
+                    {
+                        Console.WriteLine("⚠️  Warning: Failed to copy registration fields");
+                    }
+                }
+
+                // Copy email settings (if available)
+                var sourceEmails = await apiClient.GetEmailSettingsAsync(key);
+                if (sourceEmails != null)
+                {
+                    var emailsSuccess = await apiClient.UpdateEmailSettingsAsync(newWebinar.WebinarKey, sourceEmails);
+                    if (!emailsSuccess)
+                    {
+                        Console.WriteLine("⚠️  Warning: Failed to copy email settings");
+                    }
+                }
+            }
+
             switch (output.ToLowerInvariant())
             {
                 case "key-only":
@@ -496,9 +529,13 @@ public sealed class WebinarCommand : Command
                     Console.WriteLine($"  Start Time: {startTime:yyyy-MM-dd HH:mm}");
                     Console.WriteLine($"  Duration: {duration ?? sourceDuration} minutes");
                     Console.WriteLine($"  Registration URL: {newWebinar.RegistrationUrl}");
+                    if (copySettings)
+                    {
+                        Console.WriteLine($"  Settings Copied: Registration fields, Email settings");
+                    }
                     break;
             }
-        }, keyArgument, startTimeOption, subjectOption, descriptionOption, durationOption, timeZoneOption, outputOption);
+        }, keyArgument, startTimeOption, subjectOption, descriptionOption, durationOption, timeZoneOption, copySettingsOption, outputOption);
 
         return command;
     }
