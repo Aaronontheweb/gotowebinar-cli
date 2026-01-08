@@ -1,3 +1,30 @@
+#### 1.0.1 January 7th 2026 ####
+
+Bug fixes and installation improvements
+
+**Bug Fixes:**
+- **Fixed registrant list JSON parsing error** - Resolved JSON deserialization error when registrantKey is numeric instead of string ([#64](https://github.com/Aaronontheweb/gotowebinar-cli/pull/64))
+  - Fixed handling of GoToWebinar API's inconsistent registrantKey field type
+  - Ensures registrant list command works reliably across all webinars
+- **Fixed registration fields API issues** - Improved registration fields command and test isolation ([#46](https://github.com/Aaronontheweb/gotowebinar-cli/pull/46))
+  - Resolved API integration issues with registration fields endpoint
+  - Enhanced test isolation to prevent test interference
+  - More reliable registration form field management
+
+**Improvements:**
+- **Simplified installation process** - Removed sudo requirements from install scripts ([#44](https://github.com/Aaronontheweb/gotowebinar-cli/pull/44))
+  - Install scripts (install.sh/install.ps1) no longer require elevated privileges
+  - Easier setup for users with restricted permissions
+  - Updated documentation with correct CLI commands and installation instructions
+
+**Impact for Users:**
+- Registrant listing now works consistently across all webinars regardless of API response format
+- More reliable registration field management capabilities
+- Smoother installation experience without administrative privileges
+- Better documentation accuracy for setup and usage
+
+---
+
 #### 1.0.0 September 15th 2025 ####
 
 First stable release of GoToWebinar CLI

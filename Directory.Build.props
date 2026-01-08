@@ -7,37 +7,29 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <VersionPrefix>1.0.0</VersionPrefix>
-    <PackageReleaseNotes>First stable release of GoToWebinar CLI
+    <VersionPrefix>1.0.1</VersionPrefix>
+    <PackageReleaseNotes>Bug fixes and installation improvements
 
-**Major New Features:**
-- **Webinar copy and update commands** - Complete webinar management capabilities (#37)
-  - webinar copy - Clone existing webinars to new dates with optional field overrides
-  - webinar update - Modify existing webinar properties (title, description, timing, etc.)
-  - Support for multiple output formats (detail, key-only, json) for scripting workflows
-  - Enables easy management of recurring webinars and training sessions
+**Bug Fixes:**
+- **Fixed registrant list JSON parsing error** - Resolved JSON deserialization error when registrantKey is numeric instead of string (#64)
+  - Fixed handling of GoToWebinar API's inconsistent registrantKey field type
+  - Ensures registrant list command works reliably across all webinars
+- **Fixed registration fields API issues** - Improved registration fields command and test isolation (#46)
+  - Resolved API integration issues with registration fields endpoint
+  - Enhanced test isolation to prevent test interference
+  - More reliable registration form field management
 
-**Critical Bug Fixes:**
-- **Fixed OAuth authentication flow** - Resolved multiple authentication issues for reliable setup (#25, #24, #36)
-  - Fixed OAuth redirect URI encoding that was preventing successful authentication
-  - Implemented HTTP Basic Auth for token exchange to resolve invalid_client errors
-  - Corrected redirect port documentation (7878, not 8080)
-  - Enhanced auth command help text with clear setup instructions
-
-**Performance &amp; Usability Improvements:**
-- **Enhanced webinar list functionality** - Better data retrieval and organization (#36)
-  - Implemented pagination to fetch all webinars (not just first page)
-  - Added intelligent sorting: recent-first for past webinars, soonest-first for upcoming
-  - Fixed date range handling to retrieve webinars from all time periods
-  - Improved help documentation for configuration and authentication commands
+**Improvements:**
+- **Simplified installation process** - Removed sudo requirements from install scripts (#44)
+  - Install scripts (install.sh/install.ps1) no longer require elevated privileges
+  - Easier setup for users with restricted permissions
+  - Updated documentation with correct CLI commands and installation instructions
 
 **Impact for Users:**
-- Complete webinar management workflow from creation to updates and duplication
-- Reliable OAuth authentication setup with clear error messages and guidance
-- Comprehensive webinar listing that shows all available webinars with proper sorting
-- Professional tooling ready for production use with recurring webinar management
-
-This release represents the graduation from beta to stable status, providing a complete, reliable solution for GoToWebinar management via command line.</PackageReleaseNotes>
+- Registrant listing now works consistently across all webinars regardless of API response format
+- More reliable registration field management capabilities
+- Smoother installation experience without administrative privileges
+- Better documentation accuracy for setup and usage</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Visual Studio C# settings -->
