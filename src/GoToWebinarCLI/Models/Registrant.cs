@@ -5,7 +5,8 @@ namespace GoToWebinarCLI.Models;
 public sealed class Registrant
 {
     [JsonPropertyName("registrantKey")]
-    public string RegistrantKey { get; set; } = string.Empty;
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
+    public long RegistrantKey { get; set; }
 
     [JsonPropertyName("firstName")]
     public string FirstName { get; set; } = string.Empty;
