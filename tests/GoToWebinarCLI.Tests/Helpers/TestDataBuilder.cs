@@ -97,7 +97,7 @@ public static class TestDataBuilder
         {
             registrants.Add(new Registrant
             {
-                RegistrantKey = $"registrant-{i + 1}",
+                RegistrantKey = 1000000000000000000L + i + 1,
                 FirstName = $"John{i + 1}",
                 LastName = $"Doe{i + 1}",
                 Email = $"john.doe{i + 1}@example.com",
@@ -112,7 +112,7 @@ public static class TestDataBuilder
         return registrants;
     }
 
-    public static Registrant CreateRegistrant(string key = "test-registrant-1")
+    public static Registrant CreateRegistrant(long key = 1234567890123456789L)
     {
         return new Registrant
         {

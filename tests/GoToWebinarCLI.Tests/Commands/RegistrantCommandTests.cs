@@ -62,19 +62,19 @@ public class RegistrantCommandTests
     public async Task GetCommand_WithValidKey_ShouldReturnRegistrantDetails()
     {
         // Arrange
-        var registrant = TestDataBuilder.CreateRegistrant("reg-123");
+        var registrant = TestDataBuilder.CreateRegistrant(1234567890123L);
         _mockApiClient.Setup(x => x.GetRegistrantAsync(
                 _testWebinarKey,
-                "reg-123",
+                "1234567890123",
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(registrant);
 
         // Act
-        var result = await _mockApiClient.Object.GetRegistrantAsync(_testWebinarKey, "reg-123");
+        var result = await _mockApiClient.Object.GetRegistrantAsync(_testWebinarKey, "1234567890123");
 
         // Assert
         result.Should().NotBeNull();
-        result!.RegistrantKey.Should().Be("reg-123");
+        result!.RegistrantKey.Should().Be(1234567890123L);
         result.FirstName.Should().Be("Jane");
         result.LastName.Should().Be("Smith");
         result.Email.Should().Be("jane.smith@example.com");
@@ -114,7 +114,7 @@ public class RegistrantCommandTests
 
         var createdRegistrant = new Registrant
         {
-            RegistrantKey = "new-reg-456",
+            RegistrantKey = 4567890123456789L,
             FirstName = request.FirstName,
             LastName = request.LastName,
             Email = request.Email,

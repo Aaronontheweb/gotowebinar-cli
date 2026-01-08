@@ -159,7 +159,7 @@ public class JsonSerializationTests
         // Arrange
         var registrant = new Registrant
         {
-            RegistrantKey = "reg-123",
+            RegistrantKey = 1234567890123456789L,
             Email = "test@example.com",
             FirstName = "John",
             LastName = "Doe",
@@ -197,6 +197,60 @@ public class JsonSerializationTests
         deserialized.NumberOfEmployees.Should().Be(registrant.NumberOfEmployees);
         deserialized.PurchasingTimeFrame.Should().Be(registrant.PurchasingTimeFrame);
         deserialized.PurchasingRole.Should().Be(registrant.PurchasingRole);
+    }
+
+    [Fact]
+    public void Registrant_Deserialization_HandlesNumericRegistrantKey()
+    {
+        // Arrange - This simulates the actual API response where registrantKey is a number
+        // See: https://github.com/Aaronontheweb/gotowebinar-cli/issues/58
+        var json = @"{
+            ""registrantKey"": 6636963798794335320,
+            ""firstName"": ""John"",
+            ""lastName"": ""Doe"",
+            ""email"": ""john.doe@example.com"",
+            ""registrationDate"": ""2026-01-07T15:30:00Z"",
+            ""status"": ""PENDING"",
+            ""joinUrl"": ""https://global.gotowebinar.com/join/123456"",
+            ""organization"": ""Acme Corp"",
+            ""jobTitle"": ""Developer""
+        }";
+
+        // Act
+        var deserialized = JsonSerializer.Deserialize(json, _jsonContext.Registrant);
+
+        // Assert
+        deserialized.Should().NotBeNull();
+        deserialized!.RegistrantKey.Should().Be(6636963798794335320L);
+        deserialized.FirstName.Should().Be("John");
+        deserialized.LastName.Should().Be("Doe");
+        deserialized.Email.Should().Be("john.doe@example.com");
+        deserialized.Status.Should().Be("PENDING");
+        deserialized.Organization.Should().Be("Acme Corp");
+        deserialized.JobTitle.Should().Be("Developer");
+    }
+
+    [Fact]
+    public void Registrant_Deserialization_HandlesStringRegistrantKey()
+    {
+        // Arrange - Also verify backwards compatibility with string keys if API ever returns them
+        var json = @"{
+            ""registrantKey"": ""6636963798794335320"",
+            ""firstName"": ""Jane"",
+            ""lastName"": ""Smith"",
+            ""email"": ""jane.smith@example.com"",
+            ""registrationDate"": ""2026-01-07T15:30:00Z"",
+            ""status"": ""APPROVED""
+        }";
+
+        // Act
+        var deserialized = JsonSerializer.Deserialize(json, _jsonContext.Registrant);
+
+        // Assert
+        deserialized.Should().NotBeNull();
+        deserialized!.RegistrantKey.Should().Be(6636963798794335320L);
+        deserialized.FirstName.Should().Be("Jane");
+        deserialized.LastName.Should().Be("Smith");
     }
 
     [Fact]

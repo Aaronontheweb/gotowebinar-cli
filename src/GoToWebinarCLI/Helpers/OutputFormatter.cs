@@ -145,7 +145,7 @@ public static class OutputFormatter
                 "Subject" when item is Models.Webinar w => w.Subject,
                 "TimeZone" when item is Models.Webinar w => w.TimeZone,
                 "InSession" when item is Models.Webinar w => w.InSession.ToString(),
-                "RegistrantKey" when item is Models.Registrant r => r.RegistrantKey,
+                "RegistrantKey" when item is Models.Registrant r => r.RegistrantKey.ToString(),
                 "FirstName" when item is Models.Registrant r => r.FirstName,
                 "LastName" when item is Models.Registrant r => r.LastName,
                 "Email" when item is Models.Registrant r => r.Email,
