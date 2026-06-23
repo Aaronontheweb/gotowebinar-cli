@@ -1,3 +1,28 @@
+#### 1.0.2 June 23rd 2026 ####
+
+Bug fixes: complete registrant data hydration and concurrent access safety
+
+**Bug Fixes:**
+- **Fixed registrant list missing organization and jobTitle fields** - The GoToWebinar v2 list endpoint returns condensed records that omit profile fields such as organization and jobTitle ([#71](https://github.com/Aaronontheweb/gotowebinar-cli/issues/71), [#75](https://github.com/Aaronontheweb/gotowebinar-cli/pull/75))
+  - `registrant list` now fans out parallel requests to the individual registrant endpoint to hydrate full details for each record
+  - Falls back gracefully to the basic record if an individual fetch fails
+  - Hydrated results are cached normally to avoid redundant API calls
+- **Fixed thread-safety races in parallel registrant fetch** - Eliminated concurrent access bugs introduced by fanning out to the public `GetRegistrantAsync` from multiple tasks ([#75](https://github.com/Aaronontheweb/gotowebinar-cli/pull/75))
+  - Extracted private `FetchRegistrantDetailsAsync` helper that reuses the already-authenticated `HttpClient` without re-running `EnsureAuthenticatedAsync` or `GetConfigAsync`
+  - Prevents concurrent writes to `DefaultRequestHeaders.Authorization` (not thread-safe for concurrent mutation)
+  - Prevents N concurrent `RefreshTokenAsync` calls from racing to overwrite the token config file when a token expires mid-flight
+- **Fixed empty registrant list bypassing the cache** - An early return for zero-registrant webinars was skipping the cache write, causing every call for an empty webinar to re-hit the GoToWebinar API ([#75](https://github.com/Aaronontheweb/gotowebinar-cli/pull/75))
+- **Fixed `OperationCanceledException` swallowed during registrant fetch** - The generic catch block after `Task.WhenAll` was absorbing cancellation exceptions; they are now re-thrown so callers can distinguish cancellation from a real failure ([#75](https://github.com/Aaronontheweb/gotowebinar-cli/pull/75))
+- **Fixed concurrent config load race in `ConfigurationService`** - Added a `SemaphoreSlim` guard on `LoadConfigAsync` so concurrent callers cannot race on `_config` field initialization or issue simultaneous `SaveConfigAsync` file writes ([#75](https://github.com/Aaronontheweb/gotowebinar-cli/pull/75))
+
+**Impact for Users:**
+- `registrant list` now returns complete registrant profiles including organization and job title fields
+- Eliminates intermittent token refresh errors and corrupted config files when multiple parallel operations run simultaneously
+- Zero-registrant webinars no longer generate unnecessary API requests on repeated calls
+- Cancellation (Ctrl+C) during long registrant fetches is handled correctly
+
+---
+
 #### 1.0.1 January 7th 2026 ####
 
 Bug fixes and installation improvements
