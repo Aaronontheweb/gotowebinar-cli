@@ -334,11 +334,27 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
             }
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var registrants = JsonSerializer.Deserialize(content, _jsonContext.ListRegistrant);
+            var basicRegistrants = JsonSerializer.Deserialize(content, _jsonContext.ListRegistrant);
 
-            _cache[cacheKey] = (DateTime.UtcNow.Add(_cacheExpiry), content);
+            if (basicRegistrants == null || basicRegistrants.Count == 0)
+                return basicRegistrants;
 
-            return registrants;
+            // The list endpoint returns condensed records without organization, jobTitle, and
+            // other profile fields. Fetch full details for each registrant in parallel;
+            // the RateLimitHandler caps concurrency to 10 req/s automatically.
+            var detailTasks = basicRegistrants.Select(r =>
+                GetRegistrantAsync(webinarKey, r.RegistrantKey.ToString(), cancellationToken));
+
+            var detailed = await Task.WhenAll(detailTasks);
+
+            var result = detailed
+                .Select((d, i) => d ?? basicRegistrants[i])
+                .ToList();
+
+            var cacheData = JsonSerializer.Serialize(result, _jsonContext.ListRegistrant);
+            _cache[cacheKey] = (DateTime.UtcNow.Add(_cacheExpiry), cacheData);
+
+            return result;
         }
         catch (Exception ex)
         {
