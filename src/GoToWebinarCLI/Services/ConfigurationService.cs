@@ -12,6 +12,7 @@ public sealed class ConfigurationService : IConfigurationService
     private readonly string _configPath;
     private readonly GoToWebinarJsonContext _jsonContext;
     private ConfigFile? _config;
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
     private static readonly byte[] _entropy = Encoding.UTF8.GetBytes("GoToWebinar-CLI-2024");
 
     public ConfigurationService() : this(null)
@@ -46,34 +47,45 @@ public sealed class ConfigurationService : IConfigurationService
         if (_config != null)
             return _config;
 
-        if (!File.Exists(_configPath))
-        {
-            _config = new ConfigFile();
-            await SaveConfigAsync(_config);
-            return _config;
-        }
-
+        await _loadLock.WaitAsync();
         try
         {
-            var json = await File.ReadAllTextAsync(_configPath);
-            var config = JsonSerializer.Deserialize(json, _jsonContext.ConfigFile);
+            if (_config != null)
+                return _config;
 
-            if (config == null)
+            if (!File.Exists(_configPath))
             {
                 _config = new ConfigFile();
                 await SaveConfigAsync(_config);
                 return _config;
             }
 
-            DecryptSecrets(config);
-            _config = config;
-            return _config;
+            try
+            {
+                var json = await File.ReadAllTextAsync(_configPath);
+                var config = JsonSerializer.Deserialize(json, _jsonContext.ConfigFile);
+
+                if (config == null)
+                {
+                    _config = new ConfigFile();
+                    await SaveConfigAsync(_config);
+                    return _config;
+                }
+
+                DecryptSecrets(config);
+                _config = config;
+                return _config;
+            }
+            catch
+            {
+                _config = new ConfigFile();
+                await SaveConfigAsync(_config);
+                return _config;
+            }
         }
-        catch
+        finally
         {
-            _config = new ConfigFile();
-            await SaveConfigAsync(_config);
-            return _config;
+            _loadLock.Release();
         }
     }
 

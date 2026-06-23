@@ -314,8 +314,9 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
 
         var config = await _configService.GetConfigAsync();
         var profile = config.GetCurrentProfile();
+        var organizerKey = profile.OrganizerKey;
 
-        var url = $"organizers/{profile.OrganizerKey}/webinars/{webinarKey}/registrants";
+        var url = $"organizers/{organizerKey}/webinars/{webinarKey}/registrants";
         var cacheKey = $"registrants_{webinarKey}";
 
         if (_cache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
@@ -336,14 +337,15 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             var basicRegistrants = JsonSerializer.Deserialize(content, _jsonContext.ListRegistrant);
 
-            if (basicRegistrants == null || basicRegistrants.Count == 0)
-                return basicRegistrants;
+            if (basicRegistrants == null)
+                return null;
 
             // The list endpoint returns condensed records without organization, jobTitle, and
-            // other profile fields. Fetch full details for each registrant in parallel;
-            // the RateLimitHandler caps concurrency to 10 req/s automatically.
+            // other profile fields. Fetch full details for each registrant in parallel using
+            // a private helper that reuses the already-authenticated HttpClient without
+            // re-running auth/config setup. RateLimitHandler caps concurrency to 10 req/s.
             var detailTasks = basicRegistrants.Select(r =>
-                GetRegistrantAsync(webinarKey, r.RegistrantKey.ToString(), cancellationToken));
+                FetchRegistrantDetailsAsync(organizerKey, webinarKey, r.RegistrantKey.ToString(), cancellationToken));
 
             var detailed = await Task.WhenAll(detailTasks);
 
@@ -356,9 +358,44 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
 
             return result;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             Console.WriteLine($"Error: Failed to get registrants - {ex.Message}");
+            return null;
+        }
+    }
+
+    // Issues the individual registrant HTTP request directly, reusing the already-authenticated
+    // HttpClient. Intentionally skips EnsureAuthenticatedAsync and GetConfigAsync — callers
+    // must have already called EnsureAuthenticatedAsync before fanning out to this method.
+    private async Task<Registrant?> FetchRegistrantDetailsAsync(
+        string? organizerKey,
+        string webinarKey,
+        string registrantKey,
+        CancellationToken cancellationToken)
+    {
+        var url = $"organizers/{organizerKey}/webinars/{webinarKey}/registrants/{registrantKey}";
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            return JsonSerializer.Deserialize(content, _jsonContext.Registrant);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
             return null;
         }
     }
