@@ -38,14 +38,13 @@ jobs:
         id: release_notes
         shell: pwsh
         run: |
-          $version = "${{ steps.get_version.outputs.version }}"
-          $releaseNotes = & ./scripts/getReleaseNotes.ps1 -Version $version
-          
-          # Write to file to handle multiline content
-          $releaseNotes | Out-File -FilePath release_notes.txt -Encoding UTF8
-          
-          # Set output for GitHub Actions
-          echo "release_notes_file=release_notes.txt" >> $env:GITHUB_OUTPUT
+          $content = Get-Content RELEASE_NOTES.md -Raw
+          # Match from the first #### heading to just before the next one
+          if ($content -match '(?s)(####.+?)(?=\n####|\z)') {
+            $Matches[1].Trim() | Set-Content release_notes.txt
+          } else {
+            $content | Set-Content release_notes.txt
+          }
         
       - name: Create Release
         id: create_release
