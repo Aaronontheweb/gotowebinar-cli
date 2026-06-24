@@ -12,7 +12,7 @@ namespace GoToWebinarCLI.Tests.Services;
 public class ConfigurationServiceTests : IDisposable
 {
     private readonly string _testConfigDirectory;
-    private readonly List<string> _envVarsToRestore = new();
+    private readonly Dictionary<string, string?> _envVarsToRestore = new();
 
     public ConfigurationServiceTests()
     {
@@ -21,16 +21,17 @@ public class ConfigurationServiceTests : IDisposable
 
     public void Dispose()
     {
-        foreach (var key in _envVarsToRestore)
-            Environment.SetEnvironmentVariable(key, null);
+        foreach (var (key, original) in _envVarsToRestore)
+            Environment.SetEnvironmentVariable(key, original);
 
         if (Directory.Exists(_testConfigDirectory))
             Directory.Delete(_testConfigDirectory, recursive: true);
     }
 
-    private void SetEnvVar(string key, string value)
+    private void SetEnvVar(string key, string? value)
     {
-        _envVarsToRestore.Add(key);
+        if (!_envVarsToRestore.ContainsKey(key))
+            _envVarsToRestore[key] = Environment.GetEnvironmentVariable(key);
         Environment.SetEnvironmentVariable(key, value);
     }
 
@@ -96,7 +97,7 @@ public class ConfigurationServiceTests : IDisposable
     public async Task LoadConfigAsync_WithoutEnvVars_FallsBackToFileBasedLoading()
     {
         // Ensure env vars are NOT set
-        Environment.SetEnvironmentVariable("GOTOWEBINAR_ACCESS_TOKEN", null);
+        SetEnvVar("GOTOWEBINAR_ACCESS_TOKEN", null);
 
         var service = new ConfigurationService(_testConfigDirectory);
         var config = await service.LoadConfigAsync();

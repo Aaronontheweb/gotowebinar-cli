@@ -14,6 +14,7 @@ public sealed class ConfigurationService : IConfigurationService
     private ConfigFile? _config;
     private readonly SemaphoreSlim _loadLock = new(1, 1);
     private static readonly byte[] _entropy = Encoding.UTF8.GetBytes("GoToWebinar-CLI-2024");
+    private static readonly byte[] _aesKey = SHA256.HashData(Encoding.UTF8.GetBytes("GoToWebinar-CLI-2024"));
 
     public ConfigurationService() : this(null)
     {
@@ -41,9 +42,9 @@ public sealed class ConfigurationService : IConfigurationService
                 }
             }
         }
-        catch
+        catch (Exception) when (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOTOWEBINAR_ACCESS_TOKEN")))
         {
-            // Non-fatal: env-var mode will bypass file I/O
+            // Non-fatal in env-var mode: file I/O will be bypassed
         }
 
         _configPath = Path.Combine(configDir, "config.json");
@@ -128,9 +129,13 @@ public sealed class ConfigurationService : IConfigurationService
                 SetUnixFilePermissions(_configPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             }
         }
-        catch
+        catch (IOException)
         {
-            // Non-fatal: config directory may not exist or filesystem may be read-only (container)
+            // Non-fatal: filesystem may be read-only in container deployments
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Non-fatal: filesystem may be read-only in container deployments
         }
 
         _config = config;
@@ -215,7 +220,7 @@ public sealed class ConfigurationService : IConfigurationService
             }
             else
             {
-                var key = GenerateKeyFromEntropy();
+                var key = _aesKey;
                 using var aes = Aes.Create();
                 aes.Key = key;
                 aes.GenerateIV();
@@ -253,7 +258,7 @@ public sealed class ConfigurationService : IConfigurationService
             }
             else
             {
-                var key = GenerateKeyFromEntropy();
+                var key = _aesKey;
                 var cipherBytes = Convert.FromBase64String(cipherText);
 
                 using var ms = new MemoryStream(cipherBytes);
@@ -273,12 +278,6 @@ public sealed class ConfigurationService : IConfigurationService
         {
             return cipherText;
         }
-    }
-
-    private static byte[] GenerateKeyFromEntropy()
-    {
-        using var sha256 = SHA256.Create();
-        return sha256.ComputeHash(_entropy);
     }
 
     [UnsupportedOSPlatform("windows")]
@@ -306,6 +305,7 @@ public sealed class ConfigurationService : IConfigurationService
             AccessToken = accessToken,
             RefreshToken = Environment.GetEnvironmentVariable("GOTOWEBINAR_REFRESH_TOKEN"),
             OrganizerKey = Environment.GetEnvironmentVariable("GOTOWEBINAR_ORGANIZER_KEY"),
+            TokenExpiry = DateTime.MinValue,
         };
 
         var config = new ConfigFile();
