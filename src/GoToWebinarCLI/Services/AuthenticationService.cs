@@ -238,10 +238,17 @@ public class AuthenticationService
 
             token.UpdateExpiry();
             profile.AccessToken = token.AccessToken;
-            profile.RefreshToken = token.RefreshToken;
             profile.TokenExpiry = token.TokenExpiry;
-            profile.OrganizerKey = token.OrganizerKey;
-            profile.AccountKey = token.AccountKey;
+
+            // GoTo only returns a new refresh token when it rotates the old one out (near the
+            // 30-day expiry); ordinary refreshes omit it. Only overwrite when one is present so
+            // we don't wipe a still-valid refresh token. Same guard for the identity fields.
+            if (!string.IsNullOrEmpty(token.RefreshToken))
+                profile.RefreshToken = token.RefreshToken;
+            if (!string.IsNullOrEmpty(token.OrganizerKey))
+                profile.OrganizerKey = token.OrganizerKey;
+            if (!string.IsNullOrEmpty(token.AccountKey))
+                profile.AccountKey = token.AccountKey;
 
             await _configService.SaveConfigAsync(config);
             return true;
@@ -258,11 +265,12 @@ public class AuthenticationService
         var config = await _configService.GetConfigAsync();
         var profile = config.GetCurrentProfile();
 
-        if (string.IsNullOrEmpty(profile.AccessToken))
-            return false;
-
-        if (profile.TokenExpiry <= DateTime.UtcNow)
+        if (string.IsNullOrEmpty(profile.AccessToken) || profile.TokenExpiry <= DateTime.UtcNow)
         {
+            // Recoverable when a refresh token is present (e.g. refresh-token-first headless mode).
+            if (string.IsNullOrEmpty(profile.RefreshToken))
+                return false;
+
             return await RefreshTokenAsync();
         }
 

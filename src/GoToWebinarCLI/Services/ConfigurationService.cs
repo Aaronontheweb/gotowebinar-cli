@@ -14,6 +14,7 @@ public sealed class ConfigurationService : IConfigurationService
     private ConfigFile? _config;
     private readonly SemaphoreSlim _loadLock = new(1, 1);
     private static readonly byte[] _entropy = Encoding.UTF8.GetBytes("GoToWebinar-CLI-2024");
+    private static readonly byte[] _aesKey = SHA256.HashData(Encoding.UTF8.GetBytes("GoToWebinar-CLI-2024"));
 
     public ConfigurationService() : this(null)
     {
@@ -30,13 +31,20 @@ public sealed class ConfigurationService : IConfigurationService
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".gotowebinar");
 
-        if (!Directory.Exists(configDir))
+        try
         {
-            Directory.CreateDirectory(configDir);
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!Directory.Exists(configDir))
             {
-                SetUnixFilePermissions(configDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                Directory.CreateDirectory(configDir);
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    SetUnixFilePermissions(configDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                }
             }
+        }
+        catch (Exception) when (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOTOWEBINAR_ACCESS_TOKEN")))
+        {
+            // Non-fatal in env-var mode: file I/O will be bypassed
         }
 
         _configPath = Path.Combine(configDir, "config.json");
@@ -52,6 +60,13 @@ public sealed class ConfigurationService : IConfigurationService
         {
             if (_config != null)
                 return _config;
+
+            var envConfig = TryLoadFromEnvironment();
+            if (envConfig != null)
+            {
+                _config = envConfig;
+                return _config;
+            }
 
             if (!File.Exists(_configPath))
             {
@@ -104,12 +119,23 @@ public sealed class ConfigurationService : IConfigurationService
             configToSave.Profiles[kvp.Key] = EncryptProfile(kvp.Value);
         }
 
-        var json = JsonSerializer.Serialize(configToSave, _jsonContext.ConfigFile);
-        await File.WriteAllTextAsync(_configPath, json);
-
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        try
         {
-            SetUnixFilePermissions(_configPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            var json = JsonSerializer.Serialize(configToSave, _jsonContext.ConfigFile);
+            await File.WriteAllTextAsync(_configPath, json);
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                SetUnixFilePermissions(_configPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            }
+        }
+        catch (IOException)
+        {
+            // Non-fatal: filesystem may be read-only in container deployments
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Non-fatal: filesystem may be read-only in container deployments
         }
 
         _config = config;
@@ -194,7 +220,7 @@ public sealed class ConfigurationService : IConfigurationService
             }
             else
             {
-                var key = GenerateKeyFromEntropy();
+                var key = _aesKey;
                 using var aes = Aes.Create();
                 aes.Key = key;
                 aes.GenerateIV();
@@ -232,7 +258,7 @@ public sealed class ConfigurationService : IConfigurationService
             }
             else
             {
-                var key = GenerateKeyFromEntropy();
+                var key = _aesKey;
                 var cipherBytes = Convert.FromBase64String(cipherText);
 
                 using var ms = new MemoryStream(cipherBytes);
@@ -254,12 +280,6 @@ public sealed class ConfigurationService : IConfigurationService
         }
     }
 
-    private static byte[] GenerateKeyFromEntropy()
-    {
-        using var sha256 = SHA256.Create();
-        return sha256.ComputeHash(_entropy);
-    }
-
     [UnsupportedOSPlatform("windows")]
     private static void SetUnixFilePermissions(string path, UnixFileMode mode)
     {
@@ -270,6 +290,36 @@ public sealed class ConfigurationService : IConfigurationService
         catch
         {
         }
+    }
+
+    private static ConfigFile? TryLoadFromEnvironment()
+    {
+        var refreshToken = Environment.GetEnvironmentVariable("GOTOWEBINAR_REFRESH_TOKEN");
+        var accessToken = Environment.GetEnvironmentVariable("GOTOWEBINAR_ACCESS_TOKEN");
+
+        // Env-var mode activates when either credential is injected. The refresh token is the
+        // durable, preferred credential (GoTo refresh tokens live 30 days and mint access tokens
+        // on demand); an access token alone is a convenience for one-off, browserless runs.
+        if (string.IsNullOrEmpty(refreshToken) && string.IsNullOrEmpty(accessToken))
+            return null;
+
+        var profile = new ConfigProfile
+        {
+            ClientId = Environment.GetEnvironmentVariable("GOTOWEBINAR_CLIENT_ID"),
+            ClientSecret = Environment.GetEnvironmentVariable("GOTOWEBINAR_CLIENT_SECRET"),
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            OrganizerKey = Environment.GetEnvironmentVariable("GOTOWEBINAR_ORGANIZER_KEY"),
+            // With a refresh token, force a refresh on first use so we always run on a freshly
+            // minted access token rather than a possibly-stale injected one. Without a refresh
+            // token there is nothing to refresh with, so trust the injected access token as-is.
+            TokenExpiry = string.IsNullOrEmpty(refreshToken) ? DateTime.MaxValue : DateTime.MinValue,
+        };
+
+        var config = new ConfigFile();
+        config.Profiles["default"] = profile;
+        config.CurrentProfile = "default";
+        return config;
     }
 
     public string GetConfigPath() => _configPath;

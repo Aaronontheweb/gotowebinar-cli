@@ -4,7 +4,7 @@ A command-line interface for interacting with the GoToWebinar API, providing eas
 
 ## Features
 
-- **Authentication Management**: Secure OAuth2 authentication flow with token management
+- **Authentication Management**: Secure OAuth2 authentication flow with token management; env-var injection for headless/container deployments
 - **Configuration Management**: Store and manage multiple API configurations
 - **Rate Limiting**: Built-in rate limiting to respect API quotas
 - **Auto-Update**: Automatic update checking for new CLI versions
@@ -179,6 +179,40 @@ dotnet test
 The CLI stores configuration in the user's home directory:
 - Windows: `%USERPROFILE%\.gotowebinar\config.json`
 - macOS/Linux: `~/.gotowebinar/config.json`
+
+### Headless / Container Deployment
+
+When running in Docker, Kubernetes, or any environment without a browser, you can inject credentials via environment variables instead of using the interactive OAuth flow or a mounted config file:
+
+| Variable | Required | Description |
+|---|---|---|
+| `GOTOWEBINAR_REFRESH_TOKEN` | Recommended | Long-lived (30-day) refresh token. The preferred credential — the CLI mints access tokens from it on demand. |
+| `GOTOWEBINAR_CLIENT_ID` | With refresh token | OAuth client ID. Required to refresh. |
+| `GOTOWEBINAR_CLIENT_SECRET` | With refresh token | OAuth client secret. Required to refresh. |
+| `GOTOWEBINAR_ORGANIZER_KEY` | Optional | Organizer key. Populated automatically from the refresh response if omitted. |
+| `GOTOWEBINAR_ACCESS_TOKEN` | Optional | Short-lived (~1-hour) access token. A convenience for one-off runs; expires quickly, so prefer the refresh token for anything long-running. |
+
+Env-var mode activates when either `GOTOWEBINAR_REFRESH_TOKEN` or `GOTOWEBINAR_ACCESS_TOKEN` is set; the CLI then skips the config file entirely.
+
+- **With a refresh token (recommended):** also provide `GOTOWEBINAR_CLIENT_ID` and `GOTOWEBINAR_CLIENT_SECRET`. The CLI mints a fresh access token on startup and re-mints it whenever the current one expires — durable for the full 30-day life of the refresh token.
+- **With only an access token:** the CLI uses it as-is. Once it expires (~1 hour) there is nothing to refresh from, so this suits only short, one-off invocations.
+
+Refreshed tokens are written back to the config file when the filesystem is writable; on read-only mounts they are kept in memory for the lifetime of the process.
+
+#### Bootstrapping and rotating the refresh token
+
+Use `gotowebinar config export` to get credentials out of an authenticated profile for injection. It is secure-by-default: it writes to a `0600` file via `--output`, or prints to stdout only with the explicit `--reveal` flag (never by default, to keep secrets out of logs and shell history).
+
+```bash
+# One-time bootstrap on a machine with a browser:
+gotowebinar config auth
+gotowebinar config export --output creds.env      # env-style lines: GOTOWEBINAR_REFRESH_TOKEN=..., etc.
+# (--format json is also available)
+```
+
+Populate your Kubernetes Secret (or other secret store) from the exported values, then delete the file.
+
+GoTo refresh tokens expire 30 days after issuance, but GoTo rolls a new one before expiry — so an unattended job can keep the chain alive indefinitely. `gotowebinar config export --refresh` forces a token refresh (capturing GoTo's rolled refresh token) and emits the current values, which a scheduled rotation job can write back to the Secret. As long as that job runs within each 30-day window, you only ever bootstrap once.
 
 ## API Rate Limiting
 

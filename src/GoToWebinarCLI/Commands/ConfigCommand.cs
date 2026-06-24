@@ -1,5 +1,8 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
 using GoToWebinarCLI.Models;
 using GoToWebinarCLI.Services;
 
@@ -77,11 +80,33 @@ public sealed class ConfigCommand : Command
         };
         authCommand.SetHandler(async () => await AuthenticateAsync());
 
+        var exportCommand = new Command("export", "Export credentials for headless/container injection")
+        {
+            Description = "Emits the current profile's credentials (refresh token, client ID/secret, organizer key) " +
+                         "for injection into a Kubernetes Secret or env-var rotation job. Secure-by-default: writes to " +
+                         "a file (0600) via --output, or prints to stdout only with the explicit --reveal flag."
+        };
+        var exportOutputOption = new Option<string?>(new[] { "--output", "-o" }, "Write credentials to this file (created with 0600 permissions)");
+        var exportRevealOption = new Option<bool>("--reveal", "Print credentials to stdout. Use with care — stdout can be captured by logs, shell history, or agent transcripts");
+        var exportFormatOption = new Option<string>("--format", () => "env", "Output format: 'env' (KEY=value lines) or 'json'");
+        var exportRefreshOption = new Option<bool>("--refresh", "Force a token refresh before exporting, so rotation jobs capture GoTo's rolled refresh token");
+
+        exportCommand.AddOption(exportOutputOption);
+        exportCommand.AddOption(exportRevealOption);
+        exportCommand.AddOption(exportFormatOption);
+        exportCommand.AddOption(exportRefreshOption);
+
+        exportCommand.SetHandler(
+            async (string? output, bool reveal, string format, bool refresh) =>
+                await ExportCredentialsAsync(output, reveal, format, refresh),
+            exportOutputOption, exportRevealOption, exportFormatOption, exportRefreshOption);
+
         AddCommand(setCommand);
         AddCommand(authCommand);
         AddCommand(testCommand);
         AddCommand(getCommand);
         AddCommand(profilesCommand);
+        AddCommand(exportCommand);
     }
 
     private static async Task SetConfigAsync(string? clientId, string? clientSecret, string profile)
@@ -262,6 +287,115 @@ public sealed class ConfigCommand : Command
 
         var success = await authService.AuthenticateInteractiveAsync();
         Environment.Exit(success ? 0 : 1);
+    }
+
+    private static async Task ExportCredentialsAsync(string? output, bool reveal, string format, bool refresh)
+    {
+        format = (format ?? "env").ToLowerInvariant();
+        if (format != "env" && format != "json")
+        {
+            Console.Error.WriteLine($"❌ Error: Unknown format '{format}'. Use 'env' or 'json'.");
+            Environment.Exit(1);
+            return;
+        }
+
+        // Secure-by-default: refuse to emit secrets unless the destination is explicit.
+        if (string.IsNullOrEmpty(output) && !reveal)
+        {
+            Console.Error.WriteLine("❌ Error: Refusing to emit credentials without an explicit destination.");
+            Console.Error.WriteLine("  Use --output <file> to write a 0600 file, or --reveal to print to stdout.");
+            Environment.Exit(1);
+            return;
+        }
+
+        var configService = new ConfigurationService();
+        await configService.LoadConfigAsync();
+        var profile = configService.GetCurrentProfile();
+
+        if (profile == null || (string.IsNullOrEmpty(profile.RefreshToken) && string.IsNullOrEmpty(profile.AccessToken)))
+        {
+            Console.Error.WriteLine("❌ No credentials to export. Run 'gotowebinar config auth' first.");
+            Environment.Exit(1);
+            return;
+        }
+
+        if (refresh)
+        {
+            using var httpClient = new HttpClient();
+            var authService = new AuthenticationService(httpClient, configService);
+            if (!await authService.RefreshTokenAsync())
+            {
+                Console.Error.WriteLine("❌ Error: Token refresh failed. Exported credentials would be stale.");
+                Environment.Exit(1);
+                return;
+            }
+
+            profile = configService.GetCurrentProfile();
+        }
+
+        // Map each credential to the env var the CLI reads it back from (see ConfigurationService).
+        var credentials = new (string EnvKey, string JsonKey, string? Value)[]
+        {
+            ("GOTOWEBINAR_REFRESH_TOKEN", "refreshToken", profile!.RefreshToken),
+            ("GOTOWEBINAR_CLIENT_ID", "clientId", profile.ClientId),
+            ("GOTOWEBINAR_CLIENT_SECRET", "clientSecret", profile.ClientSecret),
+            ("GOTOWEBINAR_ORGANIZER_KEY", "organizerKey", profile.OrganizerKey),
+            ("GOTOWEBINAR_ACCESS_TOKEN", "accessToken", profile.AccessToken),
+        };
+
+        var content = format == "json"
+            ? SerializeAsJson(credentials)
+            : SerializeAsEnv(credentials);
+
+        if (!string.IsNullOrEmpty(output))
+        {
+            await File.WriteAllTextAsync(output, content);
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                try
+                {
+                    File.SetUnixFileMode(output, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                }
+                catch
+                {
+                    // Best-effort: filesystem may not support Unix permissions.
+                }
+            }
+
+            Console.WriteLine($"✓ Credentials written to {output}");
+            Console.WriteLine("  This file contains secrets — restrict access and delete it once injected.");
+        }
+        else
+        {
+            Console.Error.WriteLine("⚠ Emitting secrets to stdout — ensure this output is not captured by logs or history.");
+            Console.Out.Write(content);
+            if (!content.EndsWith('\n'))
+                Console.Out.WriteLine();
+        }
+    }
+
+    private static string SerializeAsEnv((string EnvKey, string JsonKey, string? Value)[] credentials)
+    {
+        var sb = new StringBuilder();
+        foreach (var (envKey, _, value) in credentials)
+        {
+            if (!string.IsNullOrEmpty(value))
+                sb.Append(envKey).Append('=').Append(value).Append('\n');
+        }
+        return sb.ToString();
+    }
+
+    private static string SerializeAsJson((string EnvKey, string JsonKey, string? Value)[] credentials)
+    {
+        var map = new Dictionary<string, string>();
+        foreach (var (_, jsonKey, value) in credentials)
+        {
+            if (!string.IsNullOrEmpty(value))
+                map[jsonKey] = value;
+        }
+
+        var context = new GoToWebinarJsonContext(new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(map, context.DictionaryStringString);
     }
 
     private static string? MaskSecret(string? secret)
