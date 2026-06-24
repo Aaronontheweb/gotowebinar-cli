@@ -7,27 +7,29 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <VersionPrefix>1.0.2</VersionPrefix>
-    <PackageReleaseNotes>Bug fixes: complete registrant data hydration and concurrent access safety
+    <VersionPrefix>1.1.0</VersionPrefix>
+    <PackageReleaseNotes>Headless and container-friendly credential management
+
+**New Features:**
+- **Environment-variable credential injection** - The CLI now reads credentials directly from environment variables, enabling headless and containerized (Docker/Kubernetes) usage without a browser or config file (#78, #79)
+  - Supported variables: GOTOWEBINAR_REFRESH_TOKEN, GOTOWEBINAR_ACCESS_TOKEN, GOTOWEBINAR_CLIENT_ID, GOTOWEBINAR_CLIENT_SECRET, and GOTOWEBINAR_ORGANIZER_KEY
+  - Refresh-token-first: given a refresh token plus client credentials, the CLI mints access tokens on demand, so no interactive browser login or on-disk config file is required
+- **config export command** - Extract credentials for secret injection and rotation workflows (#79)
+  - Secure-by-default: writes a 0600-permissioned file via --output, or prints to stdout only when you pass the explicit --reveal flag
+  - Supports --format env|json for different secret-store targets
+  - Supports --refresh to capture GoTo's rolled refresh token, ideal for credential-rotation jobs
 
 **Bug Fixes:**
-- **Fixed registrant list missing organization and jobTitle fields** - The GoToWebinar v2 list endpoint returns condensed records that omit profile fields such as organization and jobTitle (#71, #75)
-  - `registrant list` now fans out parallel requests to the individual registrant endpoint to hydrate full details for each record
-  - Falls back gracefully to the basic record if an individual fetch fails
-  - Hydrated results are cached normally to avoid redundant API calls
-- **Fixed thread-safety races in parallel registrant fetch** - Eliminated concurrent access bugs introduced by fanning out to the public GetRegistrantAsync from multiple tasks (#75)
-  - Extracted private FetchRegistrantDetailsAsync helper that reuses the already-authenticated HttpClient without re-running EnsureAuthenticatedAsync or GetConfigAsync
-  - Prevents concurrent writes to DefaultRequestHeaders.Authorization (not thread-safe for concurrent mutation)
-  - Prevents N concurrent RefreshTokenAsync calls from racing to overwrite the token config file when a token expires mid-flight
-- **Fixed empty registrant list bypassing the cache** - An early return for zero-registrant webinars was skipping the cache write, causing every call for an empty webinar to re-hit the GoToWebinar API (#75)
-- **Fixed OperationCanceledException swallowed during registrant fetch** - The generic catch block after Task.WhenAll was absorbing cancellation exceptions; they are now re-thrown so callers can distinguish cancellation from a real failure (#75)
-- **Fixed concurrent config load race in ConfigurationService** - Added a SemaphoreSlim guard on LoadConfigAsync so concurrent callers cannot race on _config field initialization or issue simultaneous SaveConfigAsync file writes (#75)
+- **Stored refresh token no longer wiped on ordinary token refreshes** - GoTo only returns a new refresh token when rotating one near expiry; the CLI now preserves the existing refresh token on routine access-token refreshes instead of clearing it (#79)
+
+**Improvements:**
+- **Recoverable from a missing access token** - When a refresh token is present, a missing or absent access token is now recovered automatically rather than failing (#79)
+- **Non-fatal config file I/O in container mode** - Config file read/write failures are now treated as non-fatal when running in container/headless mode, so ephemeral or read-only filesystems do not break the CLI (#79)
 
 **Impact for Users:**
-- `registrant list` now returns complete registrant profiles including organization and job title fields
-- Eliminates intermittent token refresh errors and corrupted config files when multiple parallel operations run simultaneously
-- Zero-registrant webinars no longer generate unnecessary API requests on repeated calls
-- Cancellation (Ctrl+C) during long registrant fetches is handled correctly</PackageReleaseNotes>
+- Run the CLI in CI pipelines, Docker containers, and Kubernetes pods using only environment variables - no browser login or persistent config file needed
+- Export and rotate credentials safely with secure-by-default file permissions
+- Long-lived refresh tokens are no longer accidentally discarded during normal operation</PackageReleaseNotes>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Visual Studio C# settings -->
