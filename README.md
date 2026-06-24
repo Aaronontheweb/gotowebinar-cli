@@ -199,7 +199,20 @@ Env-var mode activates when either `GOTOWEBINAR_REFRESH_TOKEN` or `GOTOWEBINAR_A
 
 Refreshed tokens are written back to the config file when the filesystem is writable; on read-only mounts they are kept in memory for the lifetime of the process.
 
-To bootstrap the refresh token, authenticate interactively once on a machine with a browser (`gotowebinar config auth`) and extract the refresh token from the resulting profile. Note that GoTo refresh tokens expire 30 days after issuance, so the injected value must be rotated within that window.
+#### Bootstrapping and rotating the refresh token
+
+Use `gotowebinar config export` to get credentials out of an authenticated profile for injection. It is secure-by-default: it writes to a `0600` file via `--output`, or prints to stdout only with the explicit `--reveal` flag (never by default, to keep secrets out of logs and shell history).
+
+```bash
+# One-time bootstrap on a machine with a browser:
+gotowebinar config auth
+gotowebinar config export --output creds.env      # env-style lines: GOTOWEBINAR_REFRESH_TOKEN=..., etc.
+# (--format json is also available)
+```
+
+Populate your Kubernetes Secret (or other secret store) from the exported values, then delete the file.
+
+GoTo refresh tokens expire 30 days after issuance, but GoTo rolls a new one before expiry — so an unattended job can keep the chain alive indefinitely. `gotowebinar config export --refresh` forces a token refresh (capturing GoTo's rolled refresh token) and emits the current values, which a scheduled rotation job can write back to the Secret. As long as that job runs within each 30-day window, you only ever bootstrap once.
 
 ## API Rate Limiting
 
