@@ -94,10 +94,48 @@ public class ConfigurationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadConfigAsync_WithRefreshTokenOnly_ActivatesEnvVarModeAndForcesRefresh()
+    {
+        // Refresh-token-first: only a refresh token (plus client creds) is injected, no access token.
+        SetEnvVar("GOTOWEBINAR_ACCESS_TOKEN", null);
+        SetEnvVar("GOTOWEBINAR_REFRESH_TOKEN", "env-refresh-token");
+        SetEnvVar("GOTOWEBINAR_CLIENT_ID", "env-client-id");
+        SetEnvVar("GOTOWEBINAR_CLIENT_SECRET", "env-client-secret");
+
+        // Point at a non-existent directory to prove no config file is required
+        var nonExistentDir = Path.Combine(Path.GetTempPath(), $"gotowebinar-nonexistent-{Guid.NewGuid()}");
+        var service = new ConfigurationService(nonExistentDir);
+        var config = await service.LoadConfigAsync();
+
+        var profile = config.GetCurrentProfile();
+        profile.RefreshToken.Should().Be("env-refresh-token");
+        profile.AccessToken.Should().BeNullOrEmpty();
+        // Expiry in the past forces a refresh on first use so we mint a fresh access token.
+        profile.TokenExpiry.Should().BeOnOrBefore(DateTime.UtcNow);
+    }
+
+    [Fact]
+    public async Task LoadConfigAsync_WithAccessTokenOnly_TrustsInjectedToken()
+    {
+        // One-off mode: only an access token is injected, with nothing to refresh from.
+        SetEnvVar("GOTOWEBINAR_REFRESH_TOKEN", null);
+        SetEnvVar("GOTOWEBINAR_ACCESS_TOKEN", "env-access-token");
+
+        var service = new ConfigurationService(_testConfigDirectory);
+        var config = await service.LoadConfigAsync();
+
+        var profile = config.GetCurrentProfile();
+        profile.AccessToken.Should().Be("env-access-token");
+        // Expiry in the future: the injected token is trusted as-is (no refresh path available).
+        profile.TokenExpiry.Should().BeAfter(DateTime.UtcNow);
+    }
+
+    [Fact]
     public async Task LoadConfigAsync_WithoutEnvVars_FallsBackToFileBasedLoading()
     {
-        // Ensure env vars are NOT set
+        // Ensure neither activation credential is set
         SetEnvVar("GOTOWEBINAR_ACCESS_TOKEN", null);
+        SetEnvVar("GOTOWEBINAR_REFRESH_TOKEN", null);
 
         var service = new ConfigurationService(_testConfigDirectory);
         var config = await service.LoadConfigAsync();

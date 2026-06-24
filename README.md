@@ -186,15 +186,20 @@ When running in Docker, Kubernetes, or any environment without a browser, you ca
 
 | Variable | Required | Description |
 |---|---|---|
-| `GOTOWEBINAR_ACCESS_TOKEN` | Yes | OAuth access token. Setting this activates env-var mode. |
-| `GOTOWEBINAR_ORGANIZER_KEY` | Yes | Organizer key returned during authentication. |
-| `GOTOWEBINAR_CLIENT_ID` | No | OAuth client ID (required for token refresh). |
-| `GOTOWEBINAR_CLIENT_SECRET` | No | OAuth client secret (required for token refresh). |
-| `GOTOWEBINAR_REFRESH_TOKEN` | No | Refresh token (required to extend sessions without re-authing). |
+| `GOTOWEBINAR_REFRESH_TOKEN` | Recommended | Long-lived (30-day) refresh token. The preferred credential — the CLI mints access tokens from it on demand. |
+| `GOTOWEBINAR_CLIENT_ID` | With refresh token | OAuth client ID. Required to refresh. |
+| `GOTOWEBINAR_CLIENT_SECRET` | With refresh token | OAuth client secret. Required to refresh. |
+| `GOTOWEBINAR_ORGANIZER_KEY` | Optional | Organizer key. Populated automatically from the refresh response if omitted. |
+| `GOTOWEBINAR_ACCESS_TOKEN` | Optional | Short-lived (~1-hour) access token. A convenience for one-off runs; expires quickly, so prefer the refresh token for anything long-running. |
 
-When `GOTOWEBINAR_ACCESS_TOKEN` is set, the CLI skips the config file entirely and uses the env vars directly. If `CLIENT_ID`, `CLIENT_SECRET`, and `REFRESH_TOKEN` are also provided, expired tokens are refreshed automatically. Refreshed tokens are written back to the config file when the filesystem is writable; on read-only mounts they are kept in memory for the lifetime of the process.
+Env-var mode activates when either `GOTOWEBINAR_REFRESH_TOKEN` or `GOTOWEBINAR_ACCESS_TOKEN` is set; the CLI then skips the config file entirely.
 
-To obtain the initial token values, authenticate interactively on a machine with a browser and read the values from `~/.gotowebinar/config.json` (the file is encrypted; use `gotowebinar config show` if that command is available, or run the CLI once with `--format json`).
+- **With a refresh token (recommended):** also provide `GOTOWEBINAR_CLIENT_ID` and `GOTOWEBINAR_CLIENT_SECRET`. The CLI mints a fresh access token on startup and re-mints it whenever the current one expires — durable for the full 30-day life of the refresh token.
+- **With only an access token:** the CLI uses it as-is. Once it expires (~1 hour) there is nothing to refresh from, so this suits only short, one-off invocations.
+
+Refreshed tokens are written back to the config file when the filesystem is writable; on read-only mounts they are kept in memory for the lifetime of the process.
+
+To bootstrap the refresh token, authenticate interactively once on a machine with a browser (`gotowebinar config auth`) and extract the refresh token from the resulting profile. Note that GoTo refresh tokens expire 30 days after issuance, so the injected value must be rotated within that window.
 
 ## API Rate Limiting
 

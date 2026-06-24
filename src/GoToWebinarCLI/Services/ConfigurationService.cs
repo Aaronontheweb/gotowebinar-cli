@@ -294,8 +294,13 @@ public sealed class ConfigurationService : IConfigurationService
 
     private static ConfigFile? TryLoadFromEnvironment()
     {
+        var refreshToken = Environment.GetEnvironmentVariable("GOTOWEBINAR_REFRESH_TOKEN");
         var accessToken = Environment.GetEnvironmentVariable("GOTOWEBINAR_ACCESS_TOKEN");
-        if (string.IsNullOrEmpty(accessToken))
+
+        // Env-var mode activates when either credential is injected. The refresh token is the
+        // durable, preferred credential (GoTo refresh tokens live 30 days and mint access tokens
+        // on demand); an access token alone is a convenience for one-off, browserless runs.
+        if (string.IsNullOrEmpty(refreshToken) && string.IsNullOrEmpty(accessToken))
             return null;
 
         var profile = new ConfigProfile
@@ -303,9 +308,12 @@ public sealed class ConfigurationService : IConfigurationService
             ClientId = Environment.GetEnvironmentVariable("GOTOWEBINAR_CLIENT_ID"),
             ClientSecret = Environment.GetEnvironmentVariable("GOTOWEBINAR_CLIENT_SECRET"),
             AccessToken = accessToken,
-            RefreshToken = Environment.GetEnvironmentVariable("GOTOWEBINAR_REFRESH_TOKEN"),
+            RefreshToken = refreshToken,
             OrganizerKey = Environment.GetEnvironmentVariable("GOTOWEBINAR_ORGANIZER_KEY"),
-            TokenExpiry = DateTime.MinValue,
+            // With a refresh token, force a refresh on first use so we always run on a freshly
+            // minted access token rather than a possibly-stale injected one. Without a refresh
+            // token there is nothing to refresh with, so trust the injected access token as-is.
+            TokenExpiry = string.IsNullOrEmpty(refreshToken) ? DateTime.MaxValue : DateTime.MinValue,
         };
 
         var config = new ConfigFile();

@@ -49,14 +49,16 @@ public class GoToWebinarApiClient : IGoToWebinarApiClient
         var config = await _configService.GetConfigAsync();
         var profile = config.GetCurrentProfile();
 
-        if (string.IsNullOrEmpty(profile.AccessToken))
+        // Mint or refresh the access token when it is missing or expired. A missing access token
+        // is recoverable in refresh-token-first (headless) mode, where only a refresh token is injected.
+        if (string.IsNullOrEmpty(profile.AccessToken) || profile.TokenExpiry <= DateTime.UtcNow)
         {
-            Console.WriteLine("Error: Not authenticated. Run 'gotowebinar config auth' first.");
-            return false;
-        }
+            if (string.IsNullOrEmpty(profile.RefreshToken))
+            {
+                Console.WriteLine("Error: Not authenticated. Run 'gotowebinar config auth' first.");
+                return false;
+            }
 
-        if (profile.TokenExpiry <= DateTime.UtcNow)
-        {
             var refreshed = await _authService.RefreshTokenAsync(cancellationToken);
             if (!refreshed)
             {
