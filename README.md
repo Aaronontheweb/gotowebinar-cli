@@ -4,7 +4,7 @@ A command-line interface for interacting with the GoToWebinar API, providing eas
 
 ## Features
 
-- **Authentication Management**: Secure OAuth2 authentication flow with token management
+- **Authentication Management**: Secure OAuth2 authentication flow with token management; env-var injection for headless/container deployments
 - **Configuration Management**: Store and manage multiple API configurations
 - **Rate Limiting**: Built-in rate limiting to respect API quotas
 - **Auto-Update**: Automatic update checking for new CLI versions
@@ -179,6 +179,62 @@ dotnet test
 The CLI stores configuration in the user's home directory:
 - Windows: `%USERPROFILE%\.gotowebinar\config.json`
 - macOS/Linux: `~/.gotowebinar/config.json`
+
+### Headless / Container Deployment
+
+When running in Docker, Kubernetes, or any environment without a browser, you can inject credentials via environment variables instead of using the interactive OAuth flow or a mounted config file:
+
+| Variable | Required | Description |
+|---|---|---|
+| `GOTOWEBINAR_ACCESS_TOKEN` | Yes | OAuth access token. Setting this activates env-var mode. |
+| `GOTOWEBINAR_ORGANIZER_KEY` | Yes | Organizer key returned during authentication. |
+| `GOTOWEBINAR_CLIENT_ID` | No | OAuth client ID (required for token refresh). |
+| `GOTOWEBINAR_CLIENT_SECRET` | No | OAuth client secret (required for token refresh). |
+| `GOTOWEBINAR_REFRESH_TOKEN` | No | Refresh token (required to extend sessions without re-authing). |
+
+When `GOTOWEBINAR_ACCESS_TOKEN` is set, the CLI skips the config file entirely and uses the env vars directly. If `CLIENT_ID`, `CLIENT_SECRET`, and `REFRESH_TOKEN` are also provided, expired tokens are refreshed automatically. Refreshed tokens are written back to the config file when the filesystem is writable; on read-only mounts they are kept in memory for the lifetime of the process.
+
+**Example — Kubernetes secret:**
+```yaml
+env:
+  - name: GOTOWEBINAR_ACCESS_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: gotowebinar-credentials
+        key: access-token
+  - name: GOTOWEBINAR_ORGANIZER_KEY
+    valueFrom:
+      secretKeyRef:
+        name: gotowebinar-credentials
+        key: organizer-key
+  - name: GOTOWEBINAR_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: gotowebinar-credentials
+        key: client-id
+  - name: GOTOWEBINAR_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: gotowebinar-credentials
+        key: client-secret
+  - name: GOTOWEBINAR_REFRESH_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: gotowebinar-credentials
+        key: refresh-token
+```
+
+**Example — Docker Compose:**
+```yaml
+environment:
+  GOTOWEBINAR_ACCESS_TOKEN: ${GOTOWEBINAR_ACCESS_TOKEN}
+  GOTOWEBINAR_ORGANIZER_KEY: ${GOTOWEBINAR_ORGANIZER_KEY}
+  GOTOWEBINAR_CLIENT_ID: ${GOTOWEBINAR_CLIENT_ID}
+  GOTOWEBINAR_CLIENT_SECRET: ${GOTOWEBINAR_CLIENT_SECRET}
+  GOTOWEBINAR_REFRESH_TOKEN: ${GOTOWEBINAR_REFRESH_TOKEN}
+```
+
+To obtain the initial token values, authenticate interactively on a machine with a browser and read the values from `~/.gotowebinar/config.json` (the file is encrypted; use `gotowebinar config show` if that command is available, or run the CLI once with `--format json`).
 
 ## API Rate Limiting
 
