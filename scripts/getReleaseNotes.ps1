@@ -1,86 +1,69 @@
-param (
-    [Parameter(Mandatory=$false)]
-    [string]$Version
-)
-
 function Get-ReleaseNotes {
+    <#
+    .SYNOPSIS
+        Parses RELEASE_NOTES.md and returns the version and notes for a release entry.
+    .DESCRIPTION
+        Release entries are delimited by headers of the form
+
+            #### <version> <date> ####
+
+        and separated by a '---' horizontal rule. Returns a [PSCustomObject] with
+        Version and ReleaseNotes properties. With no -TargetVersion the latest (top)
+        entry is returned. Markdown links and inline code are flattened to plain text
+        so the result is suitable for <PackageReleaseNotes>.
+    #>
     param (
         [Parameter(Mandatory=$true)]
         [string]$MarkdownFile,
+
         [string]$TargetVersion = $null
     )
 
-    # Read markdown file content
-    $content = Get-Content -Path $MarkdownFile -Raw
+    $lines = Get-Content -Path $MarkdownFile
 
-    # Split content based on headers
-    $sections = $content -split "####"
+    # Parse every release entry into { Version; Lines }.
+    $entries = @()
+    $current = $null
+    foreach ($line in $lines) {
+        if ($line -match '^####\s+(\S+)') {
+            if ($null -ne $current) { $entries += $current }
+            $current = [PSCustomObject]@{ Version = $Matches[1]; Lines = @() }
+        }
+        elseif ($null -ne $current) {
+            if ($line -match '^-{3,}\s*$') {
+                # Horizontal rule terminates the current entry's notes.
+                $entries += $current
+                $current = $null
+            }
+            else {
+                $current.Lines += $line
+            }
+        }
+    }
+    if ($null -ne $current) { $entries += $current }
 
-    # If no target version specified, get the first release
+    if ($entries.Count -eq 0) {
+        throw "No release entries found in $MarkdownFile"
+    }
+
     if ([string]::IsNullOrEmpty($TargetVersion)) {
-        if ($sections.Count -ge 2) {
-            $header = $sections[1].Trim()
-            
-            # Find the next header or use rest of content
-            $endIndex = $sections[1].IndexOf("`n---")
-            if ($endIndex -gt 0) {
-                $releaseContent = $sections[1].Substring(0, $endIndex).Trim()
-            } else {
-                $releaseContent = $sections[1].Trim()
-            }
-            
-            # Remove the version line and return just the notes
-            $lines = $releaseContent -split "`n"
-            if ($lines.Count -gt 1) {
-                return ($lines[1..($lines.Count-1)] -join "`n").Trim()
-            }
-        }
-        return ""
+        $entry = $entries[0]
+    }
+    else {
+        $entry = $entries | Where-Object { $_.Version -eq $TargetVersion } | Select-Object -First 1
     }
 
-    # Search for specific version
-    foreach ($section in $sections) {
-        if ($section.Trim() -match "^$([regex]::Escape($TargetVersion))\s") {
-            # Found the target version
-            $lines = $section.Trim() -split "`n"
-            
-            # Skip the version line and any following empty lines
-            $noteLines = @()
-            $foundContent = $false
-            
-            for ($i = 1; $i -lt $lines.Count; $i++) {
-                $line = $lines[$i]
-                
-                # Stop at the next section delimiter
-                if ($line -match "^---") {
-                    break
-                }
-                
-                # Start collecting after finding non-empty content
-                if (-not [string]::IsNullOrWhiteSpace($line)) {
-                    $foundContent = $true
-                }
-                
-                if ($foundContent -or -not [string]::IsNullOrWhiteSpace($line)) {
-                    $noteLines += $line
-                }
-            }
-            
-            return ($noteLines -join "`n").Trim()
-        }
+    if ($null -eq $entry) {
+        throw "Release notes for version '$TargetVersion' not found in $MarkdownFile"
     }
 
-    # Version not found, return empty
-    return ""
-}
+    # Flatten to plain text: [text](url) -> text, and drop inline-code backticks.
+    $notes = ($entry.Lines -join "`n").Trim()
+    $notes = [regex]::Replace($notes, '\[([^\]]+)\]\([^)]+\)', '$1')
+    $notes = $notes -replace '`', ''
 
-# Script entry point
-$releaseNotesPath = Join-Path $PSScriptRoot ".." "RELEASE_NOTES.md"
-
-if (Test-Path $releaseNotesPath) {
-    $notes = Get-ReleaseNotes -MarkdownFile $releaseNotesPath -TargetVersion $Version
-    Write-Output $notes
-} else {
-    Write-Error "RELEASE_NOTES.md not found at $releaseNotesPath"
-    exit 1
+    return [PSCustomObject]@{
+        Version      = $entry.Version
+        ReleaseNotes = $notes
+    }
 }
