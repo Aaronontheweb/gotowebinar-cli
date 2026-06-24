@@ -30,13 +30,20 @@ public sealed class ConfigurationService : IConfigurationService
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".gotowebinar");
 
-        if (!Directory.Exists(configDir))
+        try
         {
-            Directory.CreateDirectory(configDir);
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!Directory.Exists(configDir))
             {
-                SetUnixFilePermissions(configDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                Directory.CreateDirectory(configDir);
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    SetUnixFilePermissions(configDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                }
             }
+        }
+        catch
+        {
+            // Non-fatal: env-var mode will bypass file I/O
         }
 
         _configPath = Path.Combine(configDir, "config.json");
@@ -52,6 +59,13 @@ public sealed class ConfigurationService : IConfigurationService
         {
             if (_config != null)
                 return _config;
+
+            var envConfig = TryLoadFromEnvironment();
+            if (envConfig != null)
+            {
+                _config = envConfig;
+                return _config;
+            }
 
             if (!File.Exists(_configPath))
             {
@@ -104,12 +118,19 @@ public sealed class ConfigurationService : IConfigurationService
             configToSave.Profiles[kvp.Key] = EncryptProfile(kvp.Value);
         }
 
-        var json = JsonSerializer.Serialize(configToSave, _jsonContext.ConfigFile);
-        await File.WriteAllTextAsync(_configPath, json);
-
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        try
         {
-            SetUnixFilePermissions(_configPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            var json = JsonSerializer.Serialize(configToSave, _jsonContext.ConfigFile);
+            await File.WriteAllTextAsync(_configPath, json);
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                SetUnixFilePermissions(_configPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            }
+        }
+        catch
+        {
+            // Non-fatal: config directory may not exist or filesystem may be read-only (container)
         }
 
         _config = config;
@@ -270,6 +291,27 @@ public sealed class ConfigurationService : IConfigurationService
         catch
         {
         }
+    }
+
+    private static ConfigFile? TryLoadFromEnvironment()
+    {
+        var accessToken = Environment.GetEnvironmentVariable("GOTOWEBINAR_ACCESS_TOKEN");
+        if (string.IsNullOrEmpty(accessToken))
+            return null;
+
+        var profile = new ConfigProfile
+        {
+            ClientId = Environment.GetEnvironmentVariable("GOTOWEBINAR_CLIENT_ID"),
+            ClientSecret = Environment.GetEnvironmentVariable("GOTOWEBINAR_CLIENT_SECRET"),
+            AccessToken = accessToken,
+            RefreshToken = Environment.GetEnvironmentVariable("GOTOWEBINAR_REFRESH_TOKEN"),
+            OrganizerKey = Environment.GetEnvironmentVariable("GOTOWEBINAR_ORGANIZER_KEY"),
+        };
+
+        var config = new ConfigFile();
+        config.Profiles["default"] = profile;
+        config.CurrentProfile = "default";
+        return config;
     }
 
     public string GetConfigPath() => _configPath;
