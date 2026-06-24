@@ -1,3 +1,30 @@
+#### 1.1.0 June 24th 2026 ####
+
+Headless and container-friendly credential management
+
+**New Features:**
+- **Environment-variable credential injection** - The CLI now reads credentials directly from environment variables, enabling headless and containerized (Docker/Kubernetes) usage without a browser or config file ([#78](https://github.com/Aaronontheweb/gotowebinar-cli/issues/78), [#79](https://github.com/Aaronontheweb/gotowebinar-cli/pull/79))
+  - Supported variables: `GOTOWEBINAR_REFRESH_TOKEN`, `GOTOWEBINAR_ACCESS_TOKEN`, `GOTOWEBINAR_CLIENT_ID`, `GOTOWEBINAR_CLIENT_SECRET`, and `GOTOWEBINAR_ORGANIZER_KEY`
+  - Refresh-token-first: given a refresh token plus client credentials, the CLI mints access tokens on demand, so no interactive browser login or on-disk config file is required
+- **`config export` command** - Extract credentials for secret injection and rotation workflows ([#79](https://github.com/Aaronontheweb/gotowebinar-cli/pull/79))
+  - Secure-by-default: writes a `0600`-permissioned file via `--output`, or prints to stdout only when you pass the explicit `--reveal` flag
+  - Supports `--format env|json` for different secret-store targets
+  - Supports `--refresh` to capture GoTo's rolled refresh token, ideal for credential-rotation jobs
+
+**Bug Fixes:**
+- **Stored refresh token no longer wiped on ordinary token refreshes** - GoTo only returns a new refresh token when rotating one near expiry; the CLI now preserves the existing refresh token on routine access-token refreshes instead of clearing it ([#79](https://github.com/Aaronontheweb/gotowebinar-cli/pull/79))
+
+**Improvements:**
+- **Recoverable from a missing access token** - When a refresh token is present, a missing or absent access token is now recovered automatically rather than failing ([#79](https://github.com/Aaronontheweb/gotowebinar-cli/pull/79))
+- **Non-fatal config file I/O in container mode** - Config file read/write failures are now treated as non-fatal when running in container/headless mode, so ephemeral or read-only filesystems do not break the CLI ([#79](https://github.com/Aaronontheweb/gotowebinar-cli/pull/79))
+
+**Impact for Users:**
+- Run the CLI in CI pipelines, Docker containers, and Kubernetes pods using only environment variables - no browser login or persistent config file needed
+- Export and rotate credentials safely with secure-by-default file permissions
+- Long-lived refresh tokens are no longer accidentally discarded during normal operation
+
+---
+
 #### 1.0.2 June 23rd 2026 ####
 
 Bug fixes: complete registrant data hydration and concurrent access safety
