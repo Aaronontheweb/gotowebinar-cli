@@ -1,4 +1,5 @@
 using FluentAssertions;
+using GoToWebinarCLI.Commands;
 using GoToWebinarCLI.Models;
 using GoToWebinarCLI.Services;
 using GoToWebinarCLI.Tests.Helpers;
@@ -179,6 +180,39 @@ public class RegistrantCommandTests
 
         // Assert
         result.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("waiting")]
+    [InlineData("approved")]
+    [InlineData("denied")]
+    [InlineData("WAITING")]
+    [InlineData("Approved")]
+    [InlineData("DENIED")]
+    public void IsValidStatus_WithCanonicalStatus_ShouldReturnTrue(string status)
+    {
+        RegistrantCommand.IsValidStatus(status).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("pending")]    // the classic mistake: API uses WAITING, not PENDING
+    [InlineData("PENDING")]
+    [InlineData("active")]
+    [InlineData("unknown")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void IsValidStatus_WithUnknownOrEmptyStatus_ShouldReturnFalse(string? status)
+    {
+        RegistrantCommand.IsValidStatus(status).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ValidStatuses_ShouldNotContainPending()
+    {
+        // Guards against re-introducing the wrong value: "pending" is not a real
+        // GoToWebinar registrant status — unapproved registrants are "waiting".
+        RegistrantCommand.ValidStatuses.Should().BeEquivalentTo(new[] { "waiting", "approved", "denied" });
+        RegistrantCommand.ValidStatuses.Should().NotContain("pending");
     }
 
     [Fact]
