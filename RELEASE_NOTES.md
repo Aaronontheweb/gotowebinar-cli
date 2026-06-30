@@ -1,3 +1,13 @@
+#### 1.1.1 June 30th 2026 ####
+
+`registrant list --status` validation
+
+**Bug Fixes:**
+- **`registrant list --status` now validates its argument and fails loudly on unrecognized values** - Previously, passing an unknown status (e.g. `--status pending`) silently returned an empty list and exited 0, giving no indication that the filter was invalid. The command now prints a clear error message (`❌ Error: Unknown status '...'. Valid values: waiting, approved, denied.`) and exits 1.
+- **Help text corrected: `pending` is not a valid GoToWebinar status** - The `--status` option help text previously advertised `pending` as an accepted value, but GoToWebinar has no such status. Unapproved registrants appear as `waiting`. The help text now correctly lists `waiting`, `approved`, and `denied`.
+
+---
+
 #### 1.1.0 June 24th 2026 ####
 
 Headless and container-friendly credential management

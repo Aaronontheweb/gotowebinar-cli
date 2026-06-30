@@ -15,6 +15,22 @@ public sealed class RegistrantCommand : Command
         AddCommand(CreateGetCommand());
     }
 
+    /// <summary>
+    /// Canonical registrant statuses the GoToWebinar API reports (it returns them
+    /// uppercase, e.g. "WAITING"). Note there is no "pending" — that is a common
+    /// mistake and is intentionally rejected rather than aliased.
+    /// </summary>
+    public static readonly IReadOnlyList<string> ValidStatuses = new[] { "waiting", "approved", "denied" };
+
+    /// <summary>
+    /// True if <paramref name="status"/> is a recognized registrant status
+    /// (case-insensitive). Pure helper so the validation is unit-testable without
+    /// going through the command handler's <see cref="Environment.Exit(int)"/> path.
+    /// </summary>
+    public static bool IsValidStatus(string? status) =>
+        !string.IsNullOrEmpty(status) &&
+        ValidStatuses.Any(s => s.Equals(status, StringComparison.OrdinalIgnoreCase));
+
     private static Command CreateListCommand()
     {
         var command = new Command("list", "List registrants for a webinar");
@@ -27,7 +43,7 @@ public sealed class RegistrantCommand : Command
 
         var statusOption = new Option<string?>(
             new[] { "--status", "-s" },
-            "Filter by status (approved, denied, pending)");
+            "Filter by status (waiting, approved, denied)");
 
         command.AddArgument(webinarKeyArgument);
         command.AddOption(formatOption);
@@ -46,9 +62,21 @@ public sealed class RegistrantCommand : Command
                 return;
             }
 
-            // Filter by status if provided
+            // Filter by status if provided. Validate against the canonical set first
+            // and fail loudly on an unknown value — an unrecognized --status used to
+            // silently match nothing and exit 0, which made it look like a webinar had
+            // no registrants in that state (e.g. the old, wrong "pending" instead of
+            // "waiting") rather than reporting the mistake.
             if (!string.IsNullOrEmpty(status))
             {
+                if (!IsValidStatus(status))
+                {
+                    Console.Error.WriteLine(
+                        $"❌ Error: Unknown status '{status}'. Valid values: {string.Join(", ", ValidStatuses)}.");
+                    Environment.Exit(1);
+                    return;
+                }
+
                 registrants = registrants.Where(r =>
                     r.Status?.Equals(status, StringComparison.OrdinalIgnoreCase) == true).ToList();
             }
