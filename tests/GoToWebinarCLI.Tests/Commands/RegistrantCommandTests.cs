@@ -231,5 +231,88 @@ public class RegistrantCommandTests
         result.Should().NotBeNull();
         result.Should().BeEmpty();
     }
+
+    [Fact]
+    public void FormatRegistrantsJson_WithEmptyList_ShouldReturnEmptyJsonArray()
+    {
+        // An empty webinar must serialize to a valid empty JSON array, not a human
+        // sentence — otherwise --format json emits non-JSON and breaks consumers.
+        var json = RegistrantCommand.FormatRegistrantsJson(new List<Registrant>());
+
+        json.Trim().Should().Be("[]");
+    }
+
+    [Fact]
+    public void FormatRegistrantsJson_WithNull_ShouldReturnEmptyJsonArray()
+    {
+        // A null result (no registrants endpoint payload) must be treated as empty,
+        // never throw, and still produce valid JSON.
+        var json = RegistrantCommand.FormatRegistrantsJson(null);
+
+        json.Trim().Should().Be("[]");
+    }
+
+    [Fact]
+    public void FormatRegistrantsJson_WithRegistrants_ShouldReturnPopulatedJsonArray()
+    {
+        var registrants = TestDataBuilder.CreateRegistrants(3);
+
+        var json = RegistrantCommand.FormatRegistrantsJson(registrants);
+
+        json.Trim().Should().StartWith("[");
+        json.Trim().Should().EndWith("]");
+        json.Should().Contain("john.doe1@example.com");
+    }
+
+    [Fact]
+    public void FormatRegistrantsCsv_WithEmptyList_ShouldReturnHeaderOnly()
+    {
+        // An empty webinar must emit the CSV header row only (no data rows), not a
+        // human sentence — so --format csv stays parseable.
+        var csv = RegistrantCommand.FormatRegistrantsCsv(new List<Registrant>());
+
+        var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.TrimEnd('\r'))
+            .ToList();
+
+        lines.Should().ContainSingle();
+        lines[0].Should().Be(RegistrantCommand.CsvHeader);
+    }
+
+    [Fact]
+    public void FormatRegistrantsCsv_WithNull_ShouldReturnHeaderOnly()
+    {
+        // A null result must be treated as empty, never throw, and produce header-only CSV.
+        var csv = RegistrantCommand.FormatRegistrantsCsv(null);
+
+        var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.TrimEnd('\r'))
+            .ToList();
+
+        lines.Should().ContainSingle();
+        lines[0].Should().Be(RegistrantCommand.CsvHeader);
+    }
+
+    [Fact]
+    public void FormatRegistrantsCsv_WithRegistrants_ShouldReturnHeaderPlusDataRows()
+    {
+        var registrants = TestDataBuilder.CreateRegistrants(3);
+
+        var csv = RegistrantCommand.FormatRegistrantsCsv(registrants);
+
+        var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.TrimEnd('\r'))
+            .ToList();
+
+        lines[0].Should().Be(RegistrantCommand.CsvHeader);
+        lines.Should().HaveCount(4); // header + 3 data rows
+    }
+
+    [Fact]
+    public void CsvHeader_ShouldMatchExpectedColumns()
+    {
+        RegistrantCommand.CsvHeader.Should().Be(
+            "RegistrantKey,FirstName,LastName,Email,Status,RegisteredAt,JoinUrl");
+    }
 }
 
