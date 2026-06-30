@@ -1,3 +1,15 @@
+#### 1.1.2 June 30th 2026 ####
+
+`registrant list` empty-webinar output now respects `--format`
+
+**Bug Fixes:**
+- **`registrant list --format json` now emits `[]` for a webinar with no registrants** - Previously the empty case printed the human sentence `No registrants found for webinar <key>.` to stdout regardless of `--format`, so JSON consumers received non-JSON and broke. The empty case is now format-aware and serializes through the same path as the non-empty case.
+- **`registrant list --format csv` now emits the header row only when there are no registrants** - The empty case previously emitted the human sentence instead of a valid CSV document; it now outputs the `RegistrantKey,FirstName,...` header with no data rows.
+- **`table` format keeps the friendly empty message** - For human-readable output, the empty case still prints `No registrants found for webinar <key>.`
+- A null registrants result is treated as empty rather than throwing.
+
+---
+
 #### 1.1.1 June 30th 2026 ####
 
 `registrant list --status` validation

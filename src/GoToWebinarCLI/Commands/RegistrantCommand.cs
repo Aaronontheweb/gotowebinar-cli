@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Text;
 using System.Text.Json;
 using GoToWebinarCLI.Models;
 using GoToWebinarCLI.Services;
@@ -31,6 +32,48 @@ public sealed class RegistrantCommand : Command
         !string.IsNullOrEmpty(status) &&
         ValidStatuses.Any(s => s.Equals(status, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// Header row emitted first by <c>registrant list --format csv</c>. Exposed as a
+    /// constant so the empty-webinar case can be asserted to produce a header-only
+    /// document (and so the header is defined in exactly one place).
+    /// </summary>
+    public const string CsvHeader = "RegistrantKey,FirstName,LastName,Email,Status,RegisteredAt,JoinUrl";
+
+    /// <summary>
+    /// Serializes the registrant list to JSON. A null or empty list serializes to the
+    /// valid empty array <c>[]</c> rather than a human sentence, so machine consumers
+    /// of <c>--format json</c> never have to parse non-JSON for a zero-registrant
+    /// webinar. Pure helper so the empty case is unit-testable without the handler.
+    /// </summary>
+    public static string FormatRegistrantsJson(IReadOnlyList<Registrant>? registrants)
+    {
+        var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions { WriteIndented = true });
+        var list = registrants as List<Registrant> ?? registrants?.ToList() ?? new List<Registrant>();
+        return JsonSerializer.Serialize(list, jsonContext.ListRegistrant);
+    }
+
+    /// <summary>
+    /// Renders the registrant list as CSV, always starting with <see cref="CsvHeader"/>.
+    /// A null or empty list produces the header row only (no data rows) instead of a
+    /// human sentence, so <c>--format csv</c> stays parseable for an empty webinar.
+    /// Pure helper so the empty case is unit-testable without the handler.
+    /// </summary>
+    public static string FormatRegistrantsCsv(IReadOnlyList<Registrant>? registrants)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(CsvHeader);
+
+        if (registrants != null)
+        {
+            foreach (var reg in registrants)
+            {
+                sb.AppendLine($"{reg.RegistrantKey},{EscapeCsv(reg.FirstName)},{EscapeCsv(reg.LastName)},{reg.Email},{reg.Status},{reg.RegistrationDate:yyyy-MM-dd HH:mm},{reg.JoinUrl ?? ""}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
     private static Command CreateListCommand()
     {
         var command = new Command("list", "List registrants for a webinar");
@@ -54,13 +97,12 @@ public sealed class RegistrantCommand : Command
             var configService = new ConfigurationService();
             using var apiClient = new GoToWebinarApiClient(configService);
 
-            var registrants = await apiClient.GetRegistrantsAsync(webinarKey);
-
-            if (registrants == null || registrants.Count == 0)
-            {
-                Console.WriteLine($"No registrants found for webinar {webinarKey}.");
-                return;
-            }
+            // Treat a null result as an empty list so the empty case is handled by the
+            // format-aware switch below rather than a single human sentence printed for
+            // every format. Previously an empty/null result short-circuited here and
+            // emitted "No registrants found..." even under --format json/csv, breaking
+            // machine consumers (json should be "[]", csv should be the header row).
+            var registrants = await apiClient.GetRegistrantsAsync(webinarKey) ?? new List<Registrant>();
 
             // Filter by status if provided. Validate against the canonical set first
             // and fail loudly on an unknown value — an unrecognized --status used to
@@ -84,19 +126,23 @@ public sealed class RegistrantCommand : Command
             switch (format.ToLowerInvariant())
             {
                 case "json":
-                    var jsonContext = new GoToWebinarJsonContext(new JsonSerializerOptions { WriteIndented = true });
-                    Console.WriteLine(JsonSerializer.Serialize(registrants, jsonContext.ListRegistrant));
+                    // Empty list serializes to "[]" — valid JSON for a zero-registrant webinar.
+                    Console.WriteLine(FormatRegistrantsJson(registrants));
                     break;
 
                 case "csv":
-                    Console.WriteLine("RegistrantKey,FirstName,LastName,Email,Status,RegisteredAt,JoinUrl");
-                    foreach (var reg in registrants)
-                    {
-                        Console.WriteLine($"{reg.RegistrantKey},{EscapeCsv(reg.FirstName)},{EscapeCsv(reg.LastName)},{reg.Email},{reg.Status},{reg.RegistrationDate:yyyy-MM-dd HH:mm},{reg.JoinUrl ?? ""}");
-                    }
+                    // Empty list emits the header row only — still parseable as CSV.
+                    Console.Write(FormatRegistrantsCsv(registrants));
                     break;
 
                 default: // table
+                    // Human-readable format: a friendly sentence is fine for the empty case.
+                    if (registrants.Count == 0)
+                    {
+                        Console.WriteLine($"No registrants found for webinar {webinarKey}.");
+                        break;
+                    }
+
                     Console.WriteLine($"{"Key",-15} {"Name",-30} {"Email",-35} {"Status",-10} {"Registered",-20}");
                     Console.WriteLine(new string('-', 110));
 
