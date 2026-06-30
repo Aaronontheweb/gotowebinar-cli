@@ -48,7 +48,7 @@ jobs:
         
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -85,7 +85,7 @@ jobs:
     - uses: actions/checkout@v7
     
     - name: Setup .NET
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2
       with:
         dotnet-version: '10.0.x'
         
@@ -121,7 +121,7 @@ jobs:
         
     - name: Upload Release Asset (Linux/macOS)
       if: matrix.os != 'windows-latest'
-      uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -132,7 +132,7 @@ jobs:
         
     - name: Upload Release Asset (Windows)
       if: matrix.os == 'windows-latest'
-      uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -140,3 +140,87 @@ jobs:
         asset_path: ./${{ matrix.artifact_name }}.zip
         asset_name: ${{ matrix.artifact_name }}.zip
         asset_content_type: application/zip
+        
+  publish-nuget:
+    needs: [create-release, build-and-upload]
+    runs-on: ubuntu-latest
+    # Only publish to NuGet for non-prerelease versions
+    if: needs.create-release.outputs.is_prerelease == 'false'
+    steps:
+      - uses: actions/checkout@v7
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2
+        with:
+          dotnet-version: '10.0.x'
+          
+      - name: Update version and make packable
+        shell: pwsh
+        run: |
+          $version = "${{ needs.create-release.outputs.version }}"
+          $csprojPath = "src/GoToWebinarCLI/GoToWebinarCLI.csproj"
+          $content = Get-Content $csprojPath -Raw
+          $content = $content -replace '<Version>.*</Version>', "<Version>$version</Version>"
+          $content = $content -replace '<IsPackable>false</IsPackable>', '<IsPackable>true</IsPackable>'
+          $content = $content -replace '<PublishAot>true</PublishAot>', '<PublishAot>false</PublishAot>'
+          
+          # Add tool packaging properties
+          $toolProperties = @"
+            <PackAsTool>true</PackAsTool>
+            <ToolCommandName>gotowebinar</ToolCommandName>
+            <PackageId>GoToWebinarCLI</PackageId>
+            <PackageProjectUrl>https://github.com/stannardlabs/gotowebinar-cli</PackageProjectUrl>
+            <RepositoryUrl>https://github.com/stannardlabs/gotowebinar-cli</RepositoryUrl>
+            <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+            <PackageTags>gotowebinar;cli;api;webinar</PackageTags>
+          </PropertyGroup>
+          "@
+          
+          $content = $content -replace '</PropertyGroup>', "$toolProperties"
+          Set-Content -Path $csprojPath -Value $content
+          
+      - name: Pack NuGet package
+        run: dotnet pack src/GoToWebinarCLI/GoToWebinarCLI.csproj -c Release -o ./nupkg
+        
+      - name: Push to NuGet
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          dotnet nuget push ./nupkg/*.nupkg \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          
+  update-version-manifest:
+    needs: [create-release, build-and-upload]
+    runs-on: ubuntu-latest
+    # Only update manifest for non-prerelease versions
+    if: needs.create-release.outputs.is_prerelease == 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Update version manifest
+        run: |
+          cat > version.json <<EOF
+          {
+            "version": "${{ needs.create-release.outputs.version }}",
+            "releaseDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "downloads": {
+              "linux-x64": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/gotowebinar-linux-x64.tar.gz",
+              "win-x64": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/gotowebinar-win-x64.exe.zip",
+              "osx-x64": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/gotowebinar-osx-x64.tar.gz",
+              "osx-arm64": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/gotowebinar-osx-arm64.tar.gz"
+            },
+            "releaseNotes": "https://github.com/${{ github.repository }}/releases/tag/v${{ needs.create-release.outputs.version }}"
+          }
+          EOF
+          
+      - name: Commit version manifest
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add version.json
+          git diff --staged --quiet || git commit -m "Update version manifest to ${{ needs.create-release.outputs.version }}"
+          git push
